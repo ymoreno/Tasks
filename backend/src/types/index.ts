@@ -57,6 +57,8 @@ export interface ReadingHistoryEntry {
   completedDate: string;
 }
 
+export type TimerState = 'running' | 'paused' | 'stopped';
+
 export interface DayState {
   date: string;
   currentTaskIndex: number;
@@ -64,6 +66,8 @@ export interface DayState {
   dayCompleted: boolean;
   subtaskQueues: { [taskId: string]: Subtask[] };
   readingHistory?: ReadingHistoryEntry[];
+  timerElapsedSeconds?: number;
+  timerState?: TimerState;
 }
 
 // Espacios disponibles para tareas y compras

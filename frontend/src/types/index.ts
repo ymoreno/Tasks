@@ -51,12 +51,16 @@ export interface WeeklyTask {
   currentSubtaskId?: string; // ID de la subtarea activa
 }
 
+export type TimerState = 'running' | 'paused' | 'stopped';
+
 export interface DayState {
   date: string;
   currentTaskIndex: number;
   completedTasks: string[];
   dayCompleted: boolean;
   subtaskQueues: { [taskId: string]: Subtask[] };
+  timerElapsedSeconds?: number;
+  timerState?: TimerState;
 }
 
 // Espacios disponibles para tareas y compras
@@ -156,10 +160,14 @@ export interface WeeklyContextType {
   error: string | null;
   fetchWeeklyTasks: () => Promise<void>;
   fetchCurrentDay: () => Promise<void>;
-  startTask: () => Promise<void>; // Nueva función para empezar tarea
+  startTask: () => Promise<void>;
   completeTask: () => Promise<void>;
   completeSubtask: () => Promise<void>;
   updateSubtaskTitle: (subtaskId: string, newTitle: string) => Promise<void>;
+  updateTimer: (elapsedSeconds: number, state: TimerState) => Promise<void>;
+  pauseTimer: () => Promise<void>;
+  resumeTimer: () => Promise<void>;
+  tickTimer: (newSeconds: number) => void;
 }
 
 export interface PaymentContextType {

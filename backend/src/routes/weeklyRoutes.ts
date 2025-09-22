@@ -103,6 +103,13 @@ router.post('/start-task', async (req, res, next) => {
     if (currentTask.subtasks && currentTask.subtasks.length > 0 && !currentTask.currentSubtaskId) {
       currentTask.currentSubtaskId = currentTask.subtasks[0].id;
     }
+
+    // Si la tarea es 'Mac', resetear el timer.
+    if (currentTask.name === 'Mac') {
+      dayState.timerElapsedSeconds = 0;
+      dayState.timerState = 'running';
+      await WeeklyTaskService.updateDayState(dayState);
+    }
     
     const response: ApiResponse<{
       startedTask: typeof currentTask;
@@ -143,27 +150,8 @@ router.post('/complete-task', async (req, res, next) => {
       await WeeklyTaskService.rotateCompletionBasedSubtask(currentTask.id);
     }
 
-    // Handle "Mac" task special logic: only complete by time, subtasks rotate
-    if (currentTask.id === 'weekly_13') { // Assuming 'weekly_13' is the ID for "Mac"
-      // Do NOT advance dayState.currentTaskIndex
-      // Instead, just update the dayState to save the subtask rotation
-      await WeeklyTaskService.updateDayState(dayState);
-
-      const response: ApiResponse<{
-        completedTask: typeof currentTask;
-        nextTask: typeof currentTask; // Next task is still "Mac"
-        dayState: typeof dayState;
-      }> = {
-        success: true,
-        data: {
-          completedTask: currentTask,
-          nextTask: currentTask,
-          dayState
-        },
-        message: `Subtarea de Mac completada. Continúa con la siguiente subtarea.`
-      };
-      return res.json(response);
-    }
+    // The "Mac" task (weekly_13) is now handled by the normal completion flow.
+    // The special logic for subtask rotation without completion is no longer needed here.
 
     // Manejar tarea especial "Lista"
     if (currentTask.name === 'Lista') {
@@ -200,6 +188,11 @@ router.post('/complete-task', async (req, res, next) => {
     dayState.completedTasks.push(currentTask.id);
     dayState.currentTaskIndex++;
     
+    // Stop the timer if it was running for any reason
+    if (dayState.timerState === 'running' || dayState.timerState === 'paused') {
+      dayState.timerState = 'stopped';
+    }
+
     // Verificar si se completaron todas las tareas
     if (dayState.currentTaskIndex >= weeklyData.sequence.length) {
       dayState.dayCompleted = true;
@@ -289,6 +282,34 @@ router.get('/progress', async (req, res, next) => {
       message: 'Progreso semanal obtenido'
     };
     
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/weekly/timer - Actualizar el estado del timer de la tarea Mac
+router.post('/timer', async (req, res, next) => {
+  try {
+    const { elapsedSeconds, state } = req.body;
+
+    if (typeof elapsedSeconds !== 'number' || !state) {
+      throw createError('elapsedSeconds (number) and state are required', 400);
+    }
+
+    const dayState = await WeeklyTaskService.getCurrentDayState();
+
+    dayState.timerElapsedSeconds = elapsedSeconds;
+    dayState.timerState = state;
+
+    await WeeklyTaskService.updateDayState(dayState);
+
+    const response: ApiResponse<{ dayState: typeof dayState }> = {
+      success: true,
+      data: { dayState },
+      message: 'Timer state updated successfully.'
+    };
+
     res.json(response);
   } catch (error) {
     next(error);

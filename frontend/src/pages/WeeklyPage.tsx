@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert } from '@mui/material'
-import { CheckCircle, Start, SkipNext } from '@mui/icons-material'
+import { Start, SkipNext } from '@mui/icons-material'
 import { useWeeklyContext } from '@/contexts/WeeklyContext'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import TaskTimer from '@/components/weekly/TaskTimer'
@@ -8,8 +8,23 @@ import ReadingTask from '@/components/weekly/ReadingTask'
 import GameTask from '@/components/weekly/GameTask'
 
 const WeeklyPage: React.FC = () => {
-  const { weeklyTasks, dayState, currentTask, loading, error, fetchWeeklyTasks, fetchCurrentDay, startTask, completeTask, completeSubtask, updateSubtaskTitle } = useWeeklyContext()
-  const [timerActive, setTimerActive] = useState(false)
+  const {
+    weeklyTasks,
+    dayState,
+    currentTask,
+    loading,
+    error,
+    fetchWeeklyTasks,
+    fetchCurrentDay,
+    startTask,
+    completeTask,
+    completeSubtask,
+    updateSubtaskTitle,
+    updateTimer,
+    pauseTimer,
+    resumeTimer,
+    tickTimer
+  } = useWeeklyContext()
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -94,10 +109,7 @@ const WeeklyPage: React.FC = () => {
                       variant="contained"
                       startIcon={<Start />}
                       size="large"
-                      onClick={() => {
-                        startTask()
-                        setTimerActive(true)
-                      }}
+                      onClick={startTask}
                       disabled={loading}
                       color="primary"
                     >
@@ -128,13 +140,15 @@ const WeeklyPage: React.FC = () => {
                 </Box>
               </Paper>
 
-              {/* Timer - solo si la tarea está iniciada */}
-              {currentTask && currentTask.isStarted && (
+              {/* Timer - solo para la tarea 'Mac' y si está iniciada */}
+              {currentTask && currentTask.name === 'Mac' && currentTask.isStarted && dayState && dayState.timerState && (
                 <TaskTimer
                   taskName={currentTask.name}
-                  isActive={timerActive}
-                  onStart={() => setTimerActive(true)}
-                  onPause={() => setTimerActive(false)}
+                  elapsedSeconds={dayState.timerElapsedSeconds || 0}
+                  timerState={dayState.timerState}
+                  onTick={(newSeconds) => tickTimer(newSeconds)}
+                  onPause={pauseTimer}
+                  onResume={resumeTimer}
                   onComplete={completeTask}
                 />
               )}
@@ -142,7 +156,7 @@ const WeeklyPage: React.FC = () => {
               {/* Tarea de lectura especial */}
               {currentTask && currentTask.name.toLowerCase().includes('leer') && currentTask.isStarted && (
                 <ReadingTask
-                  isActive={timerActive}
+                  isActive={dayState?.timerState === 'running'}
                   subtask={currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)}
                   onUpdateTitle={(subtaskId, newTitle) => {
                     updateSubtaskTitle(subtaskId, newTitle);
@@ -153,7 +167,7 @@ const WeeklyPage: React.FC = () => {
               {/* Tarea de juego especial */}
               {currentTask && currentTask.name.toLowerCase() === 'juego' && currentTask.isStarted && (
                 <GameTask
-                  isActive={timerActive}
+                  isActive={dayState?.timerState === 'running'}
                   subtask={currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)}
                   onUpdateTitle={(subtaskId, newTitle) => {
                     updateSubtaskTitle(subtaskId, newTitle);
