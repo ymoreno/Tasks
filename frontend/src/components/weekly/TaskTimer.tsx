@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -11,186 +11,139 @@ import {
   DialogActions,
   Alert,
   Chip
-} from '@mui/material'
-import {
-  PlayArrow,
-  Pause,
-  Alarm,
-  Timer
-} from '@mui/icons-material'
+} from '@mui/material';
+import { PlayArrow, Pause, Alarm, Timer } from '@mui/icons-material';
+import { TimerState } from '@/types';
 
 interface TaskTimerProps {
-  taskName: string
-  isActive: boolean
-  onStart: () => void
-  onPause: () => void
-  onComplete: () => void
+  taskName: string;
+  elapsedSeconds: number;
+  timerState: TimerState;
+  onTick: (newSeconds: number) => void;
+  onPause: () => void;
+  onResume: () => void;
+  onComplete: () => void;
 }
 
 const TaskTimer: React.FC<TaskTimerProps> = ({
   taskName,
-  isActive,
-  onStart,
+  elapsedSeconds,
+  timerState,
+  onTick,
   onPause,
+  onResume,
   onComplete
 }) => {
-  const [seconds, setSeconds] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [showAlarm, setShowAlarm] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [showAlarm, setShowAlarm] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const TARGET_MINUTES = 45
-  const TARGET_SECONDS = TARGET_MINUTES * 60
+  const TARGET_MINUTES = 45;
+  const TARGET_SECONDS = TARGET_MINUTES * 60;
 
-  // Crear audio para la alarma
+  // Crear audio para la alarma (solo una vez)
   useEffect(() => {
-    // Crear un tono de alarma usando Web Audio API
     const createAlarmSound = () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.type = 'sine';
       
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
       
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1)
-      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5)
-      
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.5)
-    }
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    };
+    audioRef.current = { play: createAlarmSound } as any;
+  }, []);
 
-    audioRef.current = { play: createAlarmSound } as any
-  }, [])
-
-  // Controla el estado del timer basado en la prop `isActive`
+  // Timer principal controlado por el estado del contexto
   useEffect(() => {
-    if (isActive) {
-      setIsRunning(true)
-      setIsPaused(false)
-    } else {
-      if (isRunning) {
-        setIsPaused(true)
-      }
-    }
-  }, [isActive, isRunning])
+    let interval: NodeJS.Timeout | null = null;
+    if (timerState === 'running') {
+      interval = setInterval(() => {
+        const newSeconds = elapsedSeconds + 1;
+        onTick(newSeconds); // Informar al contexto del nuevo segundo
 
-  // Timer principal
-  useEffect(() => {
-    if (isRunning && !isPaused) {
-      intervalRef.current = setInterval(() => {
-        setSeconds(prev => {
-          const newSeconds = prev + 1
-          
-          // Alarma a los 45 minutos
-          if (newSeconds === TARGET_SECONDS) {
-            setShowAlarm(true)
-            playAlarm()
-          }
-          
-          return newSeconds
-        })
-      }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+        // Alarma a los 45 minutos
+        if (newSeconds >= TARGET_SECONDS) {
+          setShowAlarm(true);
+          playAlarm();
+          onComplete(); // Completar la tarea automáticamente
+        }
+      }, 1000);
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+      if (interval) {
+        clearInterval(interval);
       }
-    }
-  }, [isRunning, isPaused])
+    };
+  }, [timerState, elapsedSeconds, onTick, onComplete]);
 
   const playAlarm = () => {
     try {
       if (audioRef.current) {
-        // Reproducir múltiples tonos para hacer más notoria la alarma
         for (let i = 0; i < 3; i++) {
           setTimeout(() => {
-            audioRef.current?.play()
-          }, i * 600)
+            audioRef.current?.play();
+          }, i * 600);
         }
       }
     } catch (error) {
-      console.warn('No se pudo reproducir la alarma:', error)
+      console.warn('No se pudo reproducir la alarma:', error);
     }
-  }
-
-  const handlePause = () => {
-    setIsPaused(true)
-    onPause()
-  }
-
-  const handleResume = () => {
-    setIsPaused(false)
-    onStart()
-  }
-
-  const handleComplete = () => {
-    setIsRunning(false)
-    setIsPaused(false)
-    setSeconds(0)
-    onComplete()
-  }
+  };
 
   const formatTime = (totalSeconds: number): string => {
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    const secs = totalSeconds % 60
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`
-  }
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const getProgressPercentage = (): number => {
-    return Math.min((seconds / TARGET_SECONDS) * 100, 100)
-  }
+    return Math.min((elapsedSeconds / TARGET_SECONDS) * 100, 100);
+  };
 
   const getRemainingTime = (): string => {
-    const remaining = Math.max(TARGET_SECONDS - seconds, 0)
-    return formatTime(remaining)
-  }
+    const remaining = Math.max(TARGET_SECONDS - elapsedSeconds, 0);
+    return formatTime(remaining);
+  };
 
   const getTimerColor = () => {
-    const percentage = getProgressPercentage()
-    if (percentage >= 100) return 'error'
-    if (percentage >= 80) return 'warning'
-    return 'primary'
-  }
+    const percentage = getProgressPercentage();
+    if (percentage >= 100) return 'error';
+    if (percentage >= 80) return 'warning';
+    return 'primary';
+  };
 
   return (
     <Box>
       <Paper sx={{ p: 3, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Timer sx={{ mr: 1 }} />
-          <Typography variant="h6">
-            Timer: {taskName}
-          </Typography>
+          <Typography variant="h6">Timer: {taskName}</Typography>
         </Box>
 
-        {/* Display del tiempo */}
         <Box sx={{ textAlign: 'center', mb: 2 }}>
           <Typography variant="h3" component="div" color={getTimerColor()}>
-            {formatTime(seconds)}
+            {formatTime(elapsedSeconds)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Objetivo: {TARGET_MINUTES} minutos | Restante: {getRemainingTime()}
           </Typography>
         </Box>
 
-        {/* Barra de progreso */}
         <Box sx={{ mb: 2 }}>
           <LinearProgress
             variant="determinate"
@@ -200,69 +153,46 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
           />
         </Box>
 
-        {/* Estado y controles */}
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-          {seconds >= TARGET_SECONDS && (
-            <Chip
-              icon={<Alarm />}
-              label="¡45 minutos completados!"
-              color="warning"
-              variant="filled"
-            />
+          {elapsedSeconds >= TARGET_SECONDS && (
+            <Chip icon={<Alarm />} label="¡45 minutos completados!" color="warning" variant="filled" />
           )}
-          {isRunning && !isPaused && (
+          {timerState === 'running' && (
             <Chip label="En ejecución" color="success" variant="filled" />
           )}
-          {isPaused && (
+          {timerState === 'paused' && (
             <Chip label="Pausado" color="warning" variant="outlined" />
+          )}
+           {timerState === 'stopped' && (
+            <Chip label="Detenido" color="default" variant="outlined" />
           )}
         </Box>
 
-        {/* Botones de control */}
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-          {isRunning ? (
-            <>
-              {!isPaused ? (
-                <Button
-                  variant="outlined"
-                  startIcon={<Pause />}
-                  onClick={handlePause}
-                >
-                  Pausar
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  startIcon={<PlayArrow />}
-                  onClick={handleResume}
-                  color="success"
-                >
-                  Reanudar
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                onClick={handleComplete}
-                color="primary"
-              >
-                Completar Tarea
-              </Button>
-            </>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              El timer se ha detenido.
+          {timerState === 'running' && (
+            <Button variant="outlined" startIcon={<Pause />} onClick={onPause}>
+              Pausar
+            </Button>
+          )}
+          {timerState === 'paused' && (
+            <Button variant="contained" startIcon={<PlayArrow />} onClick={onResume} color="success">
+              Reanudar
+            </Button>
+          )}
+          {(timerState === 'running' || timerState === 'paused') && (
+            <Button variant="contained" onClick={onComplete} color="primary">
+              Completar Tarea
+            </Button>
+          )}
+           {timerState === 'stopped' && (
+             <Typography variant="body2" color="text.secondary">
+              La tarea ha finalizado.
             </Typography>
           )}
         </Box>
       </Paper>
 
-      {/* Dialog de alarma */}
-      <Dialog
-        open={showAlarm}
-        onClose={() => setShowAlarm(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={showAlarm} onClose={() => setShowAlarm(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ textAlign: 'center' }}>
           <Alarm sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
           <Typography variant="h5">¡Tiempo Completado!</Typography>
@@ -272,30 +202,20 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
             Has completado {TARGET_MINUTES} minutos en la tarea: <strong>{taskName}</strong>
           </Alert>
           <Typography variant="body1" sx={{ textAlign: 'center' }}>
-            ¿Quieres continuar trabajando o completar la tarea?
+            Puedes completar la tarea ahora o continuar más tarde.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', gap: 1 }}>
-          <Button
-            onClick={() => setShowAlarm(false)}
-            variant="outlined"
-          >
+          <Button onClick={() => setShowAlarm(false)} variant="outlined">
             Continuar
           </Button>
-          <Button
-            onClick={() => {
-              setShowAlarm(false)
-              handleComplete()
-            }}
-            variant="contained"
-            color="success"
-          >
+          <Button onClick={() => { setShowAlarm(false); onComplete(); }} variant="contained" color="success">
             Completar Tarea
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
-  )
-}
+  );
+};
 
-export default TaskTimer
+export default TaskTimer;

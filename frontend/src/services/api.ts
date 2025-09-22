@@ -257,6 +257,18 @@ export const weeklyService = {
     await api.post('/weekly/update-subtask-title', { subtaskId, newTitle });
   },
 
+  // Actualizar el estado del timer de la tarea Mac
+  async updateTimerState(elapsedSeconds: number, state: 'running' | 'paused' | 'stopped'): Promise<DayState> {
+    const response = await api.post<ApiResponse<{ dayState: DayState }>>('/weekly/timer', {
+      elapsedSeconds,
+      state,
+    });
+    if (!response.data.data) {
+      throw new Error('Error updating timer state');
+    }
+    return response.data.data.dayState;
+  },
+
   // Obtener progreso semanal
   async getProgress(): Promise<{
     totalTasks: number;

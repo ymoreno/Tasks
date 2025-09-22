@@ -17,6 +17,8 @@ type WeeklyAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_WEEKLY_TASKS'; payload: WeeklyTask[] }
   | { type: 'SET_DAY_STATE'; payload: DayState }
+  | { type: 'UPDATE_TIMER_STATE'; payload: { elapsedSeconds: number; state: 'running' | 'paused' | 'stopped' } }
+  | { type: 'SET_TIMER_LOCALLY'; payload: { elapsedSeconds: number } }
   | { type: 'SET_CURRENT_TASK'; payload: WeeklyTask | null }
 
 const weeklyReducer = (state: any, action: WeeklyAction) => {
@@ -29,6 +31,25 @@ const weeklyReducer = (state: any, action: WeeklyAction) => {
       return { ...state, weeklyTasks: action.payload, loading: false }
     case 'SET_DAY_STATE':
       return { ...state, dayState: action.payload }
+    case 'UPDATE_TIMER_STATE':
+      if (!state.dayState) return state;
+      return {
+        ...state,
+        dayState: {
+          ...state.dayState,
+          timerElapsedSeconds: action.payload.elapsedSeconds,
+          timerState: action.payload.state,
+        },
+      };
+    case 'SET_TIMER_LOCALLY':
+      if (!state.dayState) return state;
+      return {
+        ...state,
+        dayState: {
+          ...state.dayState,
+          timerElapsedSeconds: action.payload.elapsedSeconds,
+        },
+      };
     case 'SET_CURRENT_TASK':
       return { ...state, currentTask: action.payload }
     default:
@@ -111,6 +132,31 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const updateTimer = async (elapsedSeconds: number, timerState: 'running' | 'paused' | 'stopped') => {
+    try {
+      const updatedDayState = await weeklyService.updateTimerState(elapsedSeconds, timerState);
+      dispatch({ type: 'SET_DAY_STATE', payload: updatedDayState });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error updating timer' });
+    }
+  };
+
+  const pauseTimer = async () => {
+    if (state.dayState?.timerElapsedSeconds !== undefined) {
+      await updateTimer(state.dayState.timerElapsedSeconds, 'paused');
+    }
+  };
+
+  const resumeTimer = async () => {
+    if (state.dayState?.timerElapsedSeconds !== undefined) {
+      await updateTimer(state.dayState.timerElapsedSeconds, 'running');
+    }
+  };
+
+  const tickTimer = (newSeconds: number) => {
+    dispatch({ type: 'SET_TIMER_LOCALLY', payload: { elapsedSeconds: newSeconds } });
+  };
+
   const value: WeeklyContextType = {
     weeklyTasks: state.weeklyTasks,
     dayState: state.dayState,
@@ -123,6 +169,10 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     completeTask,
     completeSubtask,
     updateSubtaskTitle,
+    updateTimer,
+    pauseTimer,
+    resumeTimer,
+    tickTimer,
   }
 
   return <WeeklyContext.Provider value={value}>{children}</WeeklyContext.Provider>
