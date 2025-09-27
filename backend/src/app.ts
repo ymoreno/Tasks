@@ -8,10 +8,11 @@ import path from 'path';
 import config, { validateConfig } from './config';
 
 // Importar rutas
-import weeklyRoutes from './routes/weeklyRoutes';
-import paymentRoutes from './routes/paymentRoutes';
-import timeRoutes from './routes/timeRoutes';
-import fileRoutes from './routes/fileRoutes';
+import { weeklyRoutes } from './routes/weeklyRoutes';
+import { paymentRoutes } from './routes/paymentRoutes';
+import { timeRoutes } from './routes/timeRoutes';
+import { fileRoutes } from './routes/fileRoutes';
+import historyRoutes from './routes/historyRoutes';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -60,6 +61,7 @@ app.use(`${config.api.prefix}/weekly`, weeklyRoutes);
 app.use(`${config.api.prefix}/payments`, paymentRoutes);
 app.use(`${config.api.prefix}/time`, timeRoutes);
 app.use(`${config.api.prefix}/files`, fileRoutes);
+app.use(`${config.api.prefix}/history`, historyRoutes);
 
 // Ruta de salud del servidor
 app.get(`${config.api.prefix}/health`, (req, res) => {

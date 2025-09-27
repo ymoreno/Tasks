@@ -1,5 +1,5 @@
 import express from 'express';
-import { WeeklyTaskService, TaskService } from '../services/dataService';
+import { WeeklyTaskService, TaskService, HistoryService } from '../services/dataService';
 import { createError } from '../middleware/errorHandler';
 import { ApiResponse } from '../types';
 
@@ -16,9 +16,9 @@ router.get('/tasks', async (req, res, next) => {
       message: 'Tareas semanales obtenidas exitosamente'
     };
     
-    res.json(response);
+    return res.json(response); // Added return
   } catch (error) {
-    next(error);
+    return next(error); // Added return
   }
 });
 
@@ -28,11 +28,14 @@ router.get('/current-day', async (req, res, next) => {
     const dayState = await WeeklyTaskService.getCurrentDayState();
     const weeklyData = await WeeklyTaskService.getWeeklyData();
     
-    // Verificar si es un nuevo día
-    const today = new Date().toISOString().split('T')[0];
+    // Verificar si es un nuevo día en la zona horaria de Bogotá (GMT-5)
+    const now = new Date();
+    const bogotaNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = bogotaNow.toISOString().split('T')[0];
+
     if (dayState.date !== today) {
-      // Si es lunes, ejecutar la rotación semanal antes de resetear el día
-      const isMonday = new Date(today).getUTCDay() === 1;
+      // Si es lunes en Bogotá, ejecutar la rotación semanal
+      const isMonday = bogotaNow.getUTCDay() === 1;
       if (isMonday) {
         await WeeklyTaskService.updateWeeklyRotations();
       }
@@ -104,12 +107,10 @@ router.post('/start-task', async (req, res, next) => {
       currentTask.currentSubtaskId = currentTask.subtasks[0].id;
     }
 
-    // Si la tarea es 'Mac', resetear el timer.
-    if (currentTask.name === 'Mac') {
-      dayState.timerElapsedSeconds = 0;
-      dayState.timerState = 'running';
-      await WeeklyTaskService.updateDayState(dayState);
-    }
+    // Iniciar el temporizador para la tarea.
+    dayState.timerElapsedSeconds = 0;
+    dayState.timerState = 'running';
+    await WeeklyTaskService.updateDayState(dayState);
     
     const response: ApiResponse<{
       startedTask: typeof currentTask;
@@ -132,68 +133,122 @@ router.post('/start-task', async (req, res, next) => {
 // POST /api/weekly/complete-task - Completar tarea actual
 router.post('/complete-task', async (req, res, next) => {
   try {
-    const dayState = await WeeklyTaskService.getCurrentDayState();
+    let dayState = await WeeklyTaskService.getCurrentDayState();
     const weeklyData = await WeeklyTaskService.getWeeklyData();
-    
+
     if (dayState.dayCompleted) {
       throw createError('El día ya está completado', 400);
     }
-    
+
     const currentTask = weeklyData.sequence[dayState.currentTaskIndex];
-    
+
     if (!currentTask) {
       throw createError('No hay más tareas para hoy', 400);
     }
 
-    // Si la tarea tiene rotación por finalización, actualizar la subtarea
+    // Lógica específica para la tarea "Mac"
+    if (currentTask.id === 'weekly_13') {
+      const macCycleCompleted = await WeeklyTaskService.rotateMacSubtask(currentTask.id);
+
+      if (macCycleCompleted) {
+        // Si el ciclo de subtareas de Mac se completó, marcar la tarea principal como hecha
+        dayState.completedTasks.push(currentTask.id);
+        dayState.currentTaskIndex++;
+        dayState.timerState = 'stopped';
+
+        if (dayState.currentTaskIndex >= weeklyData.sequence.length) {
+          dayState.dayCompleted = true;
+        }
+        
+        await WeeklyTaskService.updateDayState(dayState);
+
+        const nextTask = weeklyData.sequence[dayState.currentTaskIndex];
+        
+        return res.json({
+          success: true,
+          data: {
+            completedTask: currentTask,
+            nextTask,
+            dayState
+          },
+          message: 'Ciclo de Mac completado. Siguiente tarea: ' + (nextTask?.name || 'Ninguna')
+        });
+
+      } else {
+        // Si el ciclo no se completó, solo se rotó la subtarea. La tarea principal sigue activa.
+        dayState = await WeeklyTaskService.getCurrentDayState(); // Recargar estado
+        const newWeeklyData = await WeeklyTaskService.getWeeklyData();
+        const updatedTask = newWeeklyData.sequence.find(t => t.id === currentTask.id);
+
+        return res.json({
+          success: true,
+          data: {
+            completedTask: null, // No se completa la tarea principal
+            nextTask: updatedTask, // La siguiente tarea es la misma (Mac)
+            dayState
+          },
+          message: 'Subtarea de Mac completada. La tarea continúa.'
+        });
+      }
+    }
+
+    // Lógica para otras tareas con rotación por finalización
     if (currentTask.subtaskRotation === 'completion') {
       await WeeklyTaskService.rotateCompletionBasedSubtask(currentTask.id);
     }
 
-    // The "Mac" task (weekly_13) is now handled by the normal completion flow.
-    // The special logic for subtask rotation without completion is no longer needed here.
-
     // Manejar tarea especial "Lista"
     if (currentTask.name === 'Lista') {
-      // Seleccionar tarea aleatoria de las tareas generales no completadas
       const categories = await TaskService.getAllTasks();
-      const allTasks = [];
-      
-      for (const category of Object.values(categories)) {
-        allTasks.push(...category.tasks.filter(t => !t.completed));
-      }
-      
+      const allTasks = Object.values(categories).flatMap(cat => cat.tasks.filter(t => !t.completed));
+
       if (allTasks.length === 0) {
         throw createError('No hay tareas pendientes en la lista general', 400);
       }
-      
+
       const randomTask = allTasks[Math.floor(Math.random() * allTasks.length)];
       
-      const response: ApiResponse<{
-        selectedTask: typeof randomTask;
-        message: string;
-      }> = {
+      // Completar la tarea "Lista"
+      dayState.completedTasks.push(currentTask.id);
+      dayState.currentTaskIndex++;
+
+      if (dayState.currentTaskIndex >= weeklyData.sequence.length) {
+        dayState.dayCompleted = true;
+      }
+
+      await WeeklyTaskService.updateDayState(dayState);
+
+      const nextTask = weeklyData.sequence[dayState.currentTaskIndex];
+
+      return res.json({
         success: true,
         data: {
           selectedTask: randomTask,
+          nextTask: nextTask,
+          dayState: dayState,
           message: `Tarea seleccionada: ${randomTask.name} (${randomTask.category})`
         },
         message: 'Tarea aleatoria seleccionada de la lista'
-      };
-      
-      return res.json(response);
+      });
     }
     
     // Completar tarea normal
+    if (dayState.timerElapsedSeconds) {
+      await HistoryService.addToHistory({
+        id: currentTask.id,
+        type: currentTask.name as any, // Using task name as type
+        name: currentTask.name,
+        completedDate: new Date().toISOString(),
+        timeSpent: dayState.timerElapsedSeconds * 1000, // convert to ms
+      });
+    }
     dayState.completedTasks.push(currentTask.id);
     dayState.currentTaskIndex++;
     
-    // Stop the timer if it was running for any reason
     if (dayState.timerState === 'running' || dayState.timerState === 'paused') {
       dayState.timerState = 'stopped';
     }
 
-    // Verificar si se completaron todas las tareas
     if (dayState.currentTaskIndex >= weeklyData.sequence.length) {
       dayState.dayCompleted = true;
     }
@@ -202,11 +257,7 @@ router.post('/complete-task', async (req, res, next) => {
     
     const nextTask = weeklyData.sequence[dayState.currentTaskIndex];
     
-    const response: ApiResponse<{
-      completedTask: typeof currentTask;
-      nextTask: typeof nextTask;
-      dayState: typeof dayState;
-    }> = {
+    return res.json({
       success: true,
       data: {
         completedTask: currentTask,
@@ -216,11 +267,10 @@ router.post('/complete-task', async (req, res, next) => {
       message: dayState.dayCompleted 
         ? '¡Día completado! Todas las tareas fueron realizadas' 
         : `Tarea completada. Siguiente: ${nextTask?.name || 'Ninguna'}`
-    };
-    
-    return res.json(response);
+    });
+
   } catch (error) {
-    return next(error);
+    return next(error); // Added return
   }
 });
 
@@ -240,9 +290,31 @@ router.post('/update-subtask-title', async (req, res, next) => {
       message: 'Título de la subtarea actualizado exitosamente'
     };
 
-    res.status(200).json(response);
+    return res.status(200).json(response); // Added return
   } catch (error) {
-    next(error);
+    return next(error); // Added return
+  }
+});
+
+// POST /api/weekly/finish-game-task - Finaliza un juego y rota la plataforma
+router.post('/finish-game-task', async (req, res, next) => {
+  try {
+    const { subtaskId, newTitle } = req.body;
+
+    if (!subtaskId || !newTitle) {
+      throw createError('subtaskId y newTitle son requeridos', 400);
+    }
+
+    await WeeklyTaskService.finishGameTask(subtaskId, newTitle);
+
+    const response: ApiResponse<null> = {
+      success: true,
+      message: 'Juego finalizado y plataforma rotada exitosamente'
+    };
+
+    return res.status(200).json(response); // Added return
+  } catch (error) {
+    return next(error); // Added return
   }
 });
 
@@ -255,7 +327,7 @@ router.put('/subtask/:id', async (req, res, next) => {
     // Esta funcionalidad se implementará cuando se desarrolle el sistema de subtareas
     throw createError('Funcionalidad de subtareas no implementada aún', 501);
   } catch (error) {
-    next(error);
+    return next(error); // Added return
   }
 });
 
@@ -282,9 +354,9 @@ router.get('/progress', async (req, res, next) => {
       message: 'Progreso semanal obtenido'
     };
     
-    res.json(response);
+    return res.json(response); // Added return
   } catch (error) {
-    next(error);
+    return next(error); // Added return
   }
 });
 
@@ -310,10 +382,37 @@ router.post('/timer', async (req, res, next) => {
       message: 'Timer state updated successfully.'
     };
 
-    res.json(response);
+    return res.json(response); // Added return
+  } catch (error) {
+    return next(error); // Added return
+  }
+});
+
+export { router as weeklyRoutes };
+
+// POST /api/weekly/add-course - Agregar un nuevo curso a una subtarea
+router.post('/add-course', async (req, res, next) => {
+  try {
+    const { parentSubtaskId, courseName } = req.body;
+
+    if (!parentSubtaskId || !courseName) {
+      throw createError('parentSubtaskId y courseName son requeridos', 400);
+    }
+
+    await WeeklyTaskService.addCourseToSubtask(parentSubtaskId, courseName);
+
+    res.json({ success: true, message: 'Curso agregado exitosamente' });
   } catch (error) {
     next(error);
   }
 });
 
-export default router;
+// GET /api/weekly/unfinished-courses - Obtener cursos no terminados
+router.get('/unfinished-courses', async (req, res, next) => {
+  try {
+    const unfinishedCourses = await WeeklyTaskService.getUnfinishedCourses();
+    res.json({ success: true, data: unfinishedCourses });
+  } catch (error) {
+    next(error);
+  }
+});

@@ -275,4 +275,4 @@ const formatTime = (milliseconds: number): string => {
   }
 };
 
-export default router;
+export { router as timeRoutes };

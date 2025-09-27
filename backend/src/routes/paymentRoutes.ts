@@ -70,12 +70,15 @@ router.post('/', async (req, res, next) => {
       throw createError('La URL proporcionada no es válida', 400);
     }
     
-    const paymentData = {
-      name: name.trim(),
-      url: url?.trim() || undefined,
-      description: description?.trim() || undefined,
-      category: category?.trim() || undefined
-    };
+const paymentData = {
+  name: name.trim(),
+  amount: 0, // Valor por defecto temporal
+  category: category?.trim() || 'General',
+  status: 'pendiente' as const, // Valor por defecto
+  isRecurring: false, // Valor por defecto
+  priority: 5, // Valor por defecto
+  notes: description?.trim() || undefined // Usar description como notes
+};
     
     const newPayment = await PaymentService.createPayment(paymentData);
     
@@ -199,4 +202,4 @@ router.get('/search/:query', async (req, res, next) => {
   }
 });
 
-export default router;
+export { router as paymentRoutes };

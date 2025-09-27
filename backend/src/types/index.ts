@@ -31,10 +31,15 @@ export interface Subtask {
   id: string;
   name: string;
   title?: string; // Título del libro para subtareas de lectura
-  completed: boolean;
-  order: number;
-  movedToEnd: boolean;
-  timeTracking: TimeTracking;
+  subtasks?: Subtask[];
+  currentSubtaskId?: string;
+  order?: number;
+  movedToEnd?: boolean;
+  timeTracking?: {
+    isActive: boolean;
+    totalTime: number;
+    sessions: any[];
+  };
 }
 
 export interface WeeklyTask {
@@ -51,10 +56,14 @@ export interface WeeklyTask {
   currentSubtaskId?: string;
 }
 
-export interface ReadingHistoryEntry {
-  title: string;
-  format: string;
-  completedDate: string;
+// New interface for completed items history
+export interface CompletedItem {
+  id: string;
+  type: 'Game' | 'Book' | 'Course';
+  name: string;
+  completedDate: string; // ISO string
+  timeSpent?: number; // in milliseconds
+  parentId?: string; // Optional: ID of the parent task/subtask
 }
 
 export type TimerState = 'running' | 'paused' | 'stopped';
@@ -65,9 +74,9 @@ export interface DayState {
   completedTasks: string[];
   dayCompleted: boolean;
   subtaskQueues: { [taskId: string]: Subtask[] };
-  readingHistory?: ReadingHistoryEntry[];
   timerElapsedSeconds?: number;
   timerState?: TimerState;
+  history?: CompletedItem[]; // Add this
 }
 
 // Espacios disponibles para tareas y compras
@@ -113,11 +122,19 @@ export interface Space {
 export interface Payment {
   id: string;
   name: string;
+  amount: number;
+  category: string;
   url?: string;
   description?: string;
+  status: 'pendiente' | 'pagado' | 'en proceso';
+  dueDate?: string;
+  paidDate?: string;
+  notes?: string;
+  isRecurring: boolean;
+  recurrence?: 'mensual' | 'trimestral' | 'anual';
+  priority: number; // 1: Alta, 5: Baja
   createdAt: Date;
-  category?: string;
-  space?: SpaceType; // Espacio asociado a la compra
+  updatedAt?: Date;
 }
 
 // Tipos para respuestas de API

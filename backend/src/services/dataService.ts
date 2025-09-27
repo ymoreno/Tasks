@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { Task, WeeklyTask, Payment, DayState } from '../types';
+import { Task, WeeklyTask, Payment, DayState, CompletedItem } from '../types';
 
 // --- Funciones de ayuda para el sistema de archivos ---
 
@@ -9,6 +9,7 @@ const DATA_DIR = path.join(__dirname, '../../data');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const WEEKLY_FILE = path.join(DATA_DIR, 'weekly-tasks.json');
 const PAYMENTS_FILE = path.join(DATA_DIR, 'payments.json');
+const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 
 const ensureDirectories = async () => {
@@ -51,6 +52,20 @@ const createBackup = async (filePath: string): Promise<void> => {
     console.error('Error creando respaldo:', error);
   }
 };
+
+// --- Servicio para Historial ---
+export class HistoryService {
+    static async getHistory(): Promise<CompletedItem[]> {
+        return await readJsonFile(HISTORY_FILE, []);
+    }
+
+    static async addToHistory(item: CompletedItem): Promise<void> {
+        const history = await this.getHistory();
+        history.push(item);
+        await createBackup(HISTORY_FILE);
+        await writeJsonFile(HISTORY_FILE, history);
+    }
+}
 
 // --- Servicio para Tareas Generales ---
 
@@ -126,7 +141,8 @@ export class WeeklyTaskService {
       currentTaskIndex: 0,
       completedTasks: [],
       dayCompleted: false,
-      subtaskQueues: {}
+      subtaskQueues: {},
+      history: []
     } as DayState
   };
 
@@ -195,23 +211,206 @@ export class WeeklyTaskService {
     }
     const completedSubtask = parentTask.subtasks[subtaskIndex];
     if (parentTask.id === 'weekly_3') { // Asumimos que "Leer" es weekly_3
-      if (!data.dailyState.readingHistory) {
-        data.dailyState.readingHistory = [];
-      }
-      data.dailyState.readingHistory.push({
-        title: completedSubtask.title || 'Sin título',
-        format: completedSubtask.name,
-        completedDate: new Date().toISOString(),
-      });
+        await HistoryService.addToHistory({
+            id: completedSubtask.id,
+            type: 'Book',
+            name: newTitle,
+            completedDate: new Date().toISOString(),
+            timeSpent: 0 // Opcional: calcular si es necesario
+        });
     }
     parentTask.subtasks[subtaskIndex].title = newTitle;
     await this.saveWeeklyData(data);
   }
 
+  static async finishGameTask(subtaskId: string, newTitle: string): Promise<void> {
+    const data = await this.getWeeklyData();
+    let parentTask: WeeklyTask | undefined;
+
+    for (const task of data.sequence) {
+        if (task.subtasks?.some(st => st.id === subtaskId)) {
+            parentTask = task;
+            break;
+        }
+    }
+
+    if (!parentTask || !parentTask.subtasks) {
+        throw new Error('Tarea de juego no encontrada o no tiene subtareas.');
+    }
+
+    const currentSubtaskIndex = parentTask.subtasks.findIndex(st => st.id === subtaskId);
+    if (currentSubtaskIndex === -1) {
+        throw new Error('Subtarea de juego actual no encontrada.');
+    }
+    
+    const completedSubtask = parentTask.subtasks[currentSubtaskIndex];
+    await HistoryService.addToHistory({
+        id: completedSubtask.id,
+        type: 'Game',
+        name: completedSubtask.name,
+        completedDate: new Date().toISOString(),
+        timeSpent: 0 // Opcional: calcular si es necesario
+    });
+
+    parentTask.subtasks[currentSubtaskIndex].title = newTitle;
+
+    const nextSubtaskIndex = (currentSubtaskIndex + 1) % parentTask.subtasks.length;
+    const nextSubtaskId = parentTask.subtasks[nextSubtaskIndex].id;
+    parentTask.currentSubtaskId = nextSubtaskId;
+
+    await this.saveWeeklyData(data);
+  }
+
+  static async completeCourse(parentSubtaskId: string, courseSubtaskId: string): Promise<void> {
+    const data = await this.getWeeklyData();
+    const macTask = data.sequence.find(t => t.id === 'weekly_13');
+
+    if (!macTask || !macTask.subtasks) {
+        throw new Error('Tarea Mac no encontrada');
+    }
+
+    const parentSubtask = macTask.subtasks.find(st => st.id === parentSubtaskId);
+
+    if (!parentSubtask || !parentSubtask.subtasks) {
+        throw new Error('Subtarea padre no encontrada o no tiene subtareas');
+    }
+
+    const courseIndex = parentSubtask.subtasks.findIndex(st => st.id === courseSubtaskId);
+
+    if (courseIndex === -1) {
+        throw new Error('Curso no encontrado');
+    }
+
+    const course = parentSubtask.subtasks[courseIndex];
+
+    await HistoryService.addToHistory({
+        id: course.id,
+        type: 'Course',
+        name: course.name,
+        completedDate: new Date().toISOString(),
+        timeSpent: course.timeTracking?.totalTime || 0
+    });
+
+    parentSubtask.subtasks.splice(courseIndex, 1);
+    await this.saveWeeklyData(data);
+  }
+
+  static async getUnfinishedCourses(): Promise<any[]> {
+    const data = await this.getWeeklyData();
+    const macTask = data.sequence.find(t => t.id === 'weekly_13');
+    if (!macTask || !macTask.subtasks) {
+      return [];
+    }
+
+    const practicas = macTask.subtasks.find(st => st.id === 'sub_mac_practicas');
+    const related = macTask.subtasks.find(st => st.id === 'sub_mac_related');
+
+    const unfinishedCourses = [];
+    if (practicas && practicas.subtasks) {
+      unfinishedCourses.push(...practicas.subtasks.map(c => ({ ...c, parentName: practicas.name })));
+    }
+    if (related && related.subtasks) {
+      unfinishedCourses.push(...related.subtasks.map(c => ({ ...c, parentName: related.name })));
+    }
+
+    return unfinishedCourses;
+  }
+
+  static async rotateMacSubtask(taskId: string): Promise<boolean> {
+    const data = await this.getWeeklyData();
+    const task = data.sequence.find(t => t.id === taskId);
+
+    if (!task || !task.subtasks || task.subtasks.length === 0) {
+      return false;
+    }
+
+    const currentIndex = task.subtasks.findIndex(st => st.id === task.currentSubtaskId);
+    if (currentIndex === -1) {
+      return false;
+    }
+
+    const currentSubtask = task.subtasks[currentIndex];
+
+    if (currentSubtask.id === 'sub_mac_practicas' || currentSubtask.id === 'sub_mac_related') {
+      console.log(`Procesando subtarea especial: ${currentSubtask.name}`);
+    }
+
+    if (currentIndex === task.subtasks.length - 1) {
+      task.currentSubtaskId = task.subtasks[0].id;
+      await this.saveWeeklyData(data);
+      return true; 
+    } else {
+      const nextIndex = currentIndex + 1;
+      const nextSubtaskId = task.subtasks[nextIndex].id;
+      task.currentSubtaskId = nextSubtaskId;
+      await this.saveWeeklyData(data);
+      return false;
+    }
+  }
+  
+  static async addCourseToSubtask(parentSubtaskId: string, courseName: string): Promise<void> {
+    const data = await this.getWeeklyData();
+    const macTask = data.sequence.find(t => t.id === 'weekly_13');
+
+    if (!macTask || !macTask.subtasks) {
+      throw new Error('Tarea Mac no encontrada');
+    }
+
+    const parentSubtask = macTask.subtasks.find(st => st.id === parentSubtaskId);
+
+    if (!parentSubtask) {
+      throw new Error('Subtarea padre no encontrada');
+    }
+
+    if (!parentSubtask.subtasks) {
+      parentSubtask.subtasks = [];
+    }
+
+    const newCourse = {
+      id: `sub_${parentSubtaskId}_${courseName.toLowerCase().replace(/\s/g, '_')}`,
+      name: courseName,
+      completed: false,
+      order: parentSubtask.subtasks.length + 1,
+      movedToEnd: false,
+      timeTracking: {
+        isActive: false,
+        totalTime: 0,
+        sessions: []
+      }
+    };
+
+    parentSubtask.subtasks.push(newCourse);
+    await this.saveWeeklyData(data);
+  }
+
+  static async deleteCourseFromSubtask(parentSubtaskId: string, courseSubtaskId: string): Promise<boolean> {
+    const data = await this.getWeeklyData();
+    const macTask = data.sequence.find(t => t.id === 'weekly_13');
+
+    if (!macTask || !macTask.subtasks) {
+      throw new Error('Tarea Mac no encontrada');
+    }
+
+    const parentSubtask = macTask.subtasks.find(st => st.id === parentSubtaskId);
+
+    if (!parentSubtask || !parentSubtask.subtasks) {
+      throw new Error('Subtarea padre no encontrada o no tiene subtareas');
+    }
+
+    const initialLength = parentSubtask.subtasks.length;
+    parentSubtask.subtasks = parentSubtask.subtasks.filter(st => st.id !== courseSubtaskId);
+
+    if (parentSubtask.subtasks.length < initialLength) {
+      await this.saveWeeklyData(data);
+      return true;
+    }
+    return false;
+  }
+
   static async rotateCompletionBasedSubtask(taskId: string): Promise<void> {
     const data = await this.getWeeklyData();
     const task = data.sequence.find(t => t.id === taskId);
-    if (!task || task.subtaskRotation !== 'completion' || !task.subtasks || task.subtasks.length === 0) {
+    if (!task || task.subtaskRotation !== 'completion' || !task.subtasks || !task.subtasks.length) {
       return;
     }
     const currentIndex = task.subtasks.findIndex(st => st.id === task.currentSubtaskId);
@@ -244,7 +443,24 @@ export class PaymentService {
 
   static async createPayment(paymentData: Omit<Payment, 'id' | 'createdAt'>): Promise<Payment> {
     const payments = await this.getAllPayments();
-    const newPayment: Payment = { ...paymentData, id: uuidv4(), createdAt: new Date() };
+    
+    const createdAt = new Date();
+    let dueDate = paymentData.dueDate;
+    if (!dueDate) {
+      const twoWeeksLater = new Date(createdAt);
+      twoWeeksLater.setDate(createdAt.getDate() + 14);
+      dueDate = twoWeeksLater.toISOString().split('T')[0];
+    }
+
+    const newPayment: Payment = {
+      ...paymentData,
+      id: uuidv4(),
+      createdAt,
+      priority: paymentData.priority || 5,
+      dueDate,
+      isRecurring: paymentData.isRecurring || false,
+    };
+    
     payments.push(newPayment);
     await this.saveAllPayments(payments);
     return newPayment;
@@ -277,3 +493,4 @@ ensureDirectories();
 export const weeklyTaskService = new WeeklyTaskService();
 export const taskService = new TaskService();
 export const paymentService = new PaymentService();
+export const historyService = new HistoryService();

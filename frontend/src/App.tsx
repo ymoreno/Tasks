@@ -13,6 +13,8 @@ import OfflineStatus from './components/common/OfflineStatus'
 const WeeklyPage = React.lazy(() => import('./pages/WeeklyPage'))
 const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'))
 const StatsPage = React.lazy(() => import('./pages/StatsPage'))
+const HistoryPage = React.lazy(() => import('./pages/HistoryPage'))
+const UnfinishedCoursesPage = React.lazy(() => import('./pages/UnfinishedCoursesPage'))
 
 // Importar contextos
 import { WeeklyProvider } from './contexts/WeeklyContext'
@@ -37,6 +39,8 @@ function App() {
                 <Route path="/weekly" element={<WeeklyPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/stats" element={<StatsPage />} />
+                <Route path="/history" element={<HistoryPage />} />
+                <Route path="/unfinished-courses" element={<UnfinishedCoursesPage />} />
                 <Route path="*" element={
                   <Box sx={{ textAlign: 'center', py: 8 }}>
                     <h2>Página no encontrada</h2>

@@ -22,10 +22,10 @@ import { Subtask } from '@/types';
 interface ReadingTaskProps {
   isActive: boolean;
   subtask: Subtask | undefined;
-  onSubtaskComplete: (subtaskId: string, newTitle: string) => void;
+  onUpdateTitle: (subtaskId: string, newTitle: string) => void;
 }
 
-const ReadingTask: React.FC<ReadingTaskProps> = ({ isActive, subtask, onSubtaskComplete }) => {
+const ReadingTask: React.FC<ReadingTaskProps> = ({ isActive, subtask, onUpdateTitle }) => {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 

@@ -12,7 +12,9 @@ import {
   Assignment, 
   Schedule, 
   Payment, 
-  Analytics 
+  Analytics, 
+  History, 
+  List 
 } from '@mui/icons-material'
 
 const Navigation: React.FC = () => {
@@ -27,11 +29,13 @@ const Navigation: React.FC = () => {
     if (path === '/' || path === '/weekly') return 0
     if (path === '/payments') return 1
     if (path === '/stats') return 2
+    if (path === '/history') return 3
+    if (path === '/unfinished-courses') return 4
     return 0
   }
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const routes = ['/weekly', '/payments', '/stats']
+    const routes = ['/weekly', '/payments', '/stats', '/history', '/unfinished-courses']
     navigate(routes[newValue])
   }
 
@@ -80,6 +84,18 @@ const Navigation: React.FC = () => {
           <Tab
             icon={<Analytics />}
             label="Estadísticas"
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+          <Tab
+            icon={<History />}
+            label="Historial"
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+          <Tab
+            icon={<List />}
+            label="Cursos Pendientes"
             iconPosition="start"
             sx={{ gap: 1 }}
           />

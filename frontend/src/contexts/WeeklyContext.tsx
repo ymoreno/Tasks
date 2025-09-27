@@ -98,14 +98,14 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const completeTask = async () => {
     try {
       const result = await weeklyService.completeTask()
+      
+      if (result.selectedTask) {
+        alert(`Tarea aleatoria seleccionada: ${result.selectedTask.name}`);
+      }
+
       dispatch({ type: 'SET_DAY_STATE', payload: result.dayState })
       dispatch({ type: 'SET_CURRENT_TASK', payload: result.nextTask })
       
-      // Si hay una tarea seleccionada aleatoriamente, mostrarla
-      if (result.selectedTask) {
-        // TODO: Mostrar modal o notificación con la tarea seleccionada
-        console.log('Tarea aleatoria seleccionada:', result.selectedTask.name)
-      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error completando tarea' })
     }
@@ -129,6 +129,17 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       await fetchCurrentDay();
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error actualizando el título de la subtarea' });
+    }
+  };
+
+  const finishGameTask = async (subtaskId: string, newTitle: string) => {
+    try {
+      await weeklyService.finishGameTask(subtaskId, newTitle);
+      // Recargar los datos para reflejar el cambio de título y la rotación
+      await fetchWeeklyTasks();
+      await fetchCurrentDay();
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error finalizando la tarea de juego' });
     }
   };
 
@@ -157,6 +168,25 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     dispatch({ type: 'SET_TIMER_LOCALLY', payload: { elapsedSeconds: newSeconds } });
   };
 
+  const addCourse = async (parentSubtaskId: string, courseName: string) => {
+    try {
+      await weeklyService.addCourseToSubtask(parentSubtaskId, courseName);
+      await fetchWeeklyTasks();
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error agregando curso' });
+    }
+  };
+
+  const completeCourse = async (parentSubtaskId: string, courseSubtaskId: string) => {
+    try {
+      await weeklyService.completeCourse(parentSubtaskId, courseSubtaskId);
+      await fetchWeeklyTasks();
+      await fetchCurrentDay();
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error completando curso' });
+    }
+  };
+
   const value: WeeklyContextType = {
     weeklyTasks: state.weeklyTasks,
     dayState: state.dayState,
@@ -169,10 +199,13 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     completeTask,
     completeSubtask,
     updateSubtaskTitle,
+    finishGameTask,
     updateTimer,
     pauseTimer,
     resumeTimer,
     tickTimer,
+    addCourse,
+    completeCourse,
   }
 
   return <WeeklyContext.Provider value={value}>{children}</WeeklyContext.Provider>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert } from '@mui/material'
+import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert, TextField } from '@mui/material'
 import { Start, SkipNext } from '@mui/icons-material'
 import { useWeeklyContext } from '@/contexts/WeeklyContext'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
@@ -20,10 +20,13 @@ const WeeklyPage: React.FC = () => {
     completeTask,
     completeSubtask,
     updateSubtaskTitle,
+    finishGameTask,
     updateTimer,
     pauseTimer,
     resumeTimer,
-    tickTimer
+    tickTimer,
+    addCourse,
+    completeCourse
   } = useWeeklyContext()
 
   // Cargar datos al montar el componente
@@ -123,7 +126,7 @@ const WeeklyPage: React.FC = () => {
                       variant="outlined"
                       startIcon={<SkipNext />}
                       size="large"
-                      onClick={completeSubtask}
+                      onClick={completeTask} // Changed from completeSubtask
                       disabled={loading}
                       color="secondary"
                     >
@@ -140,8 +143,8 @@ const WeeklyPage: React.FC = () => {
                 </Box>
               </Paper>
 
-              {/* Timer - solo para la tarea 'Mac' y si está iniciada */}
-              {currentTask && currentTask.name === 'Mac' && currentTask.isStarted && dayState && dayState.timerState && (
+              {/* Timer - Visible para cualquier tarea iniciada */}
+              {currentTask && currentTask.isStarted && dayState && dayState.timerState && (
                 <TaskTimer
                   taskName={currentTask.name}
                   elapsedSeconds={dayState.timerElapsedSeconds || 0}
@@ -169,10 +172,60 @@ const WeeklyPage: React.FC = () => {
                 <GameTask
                   isActive={dayState?.timerState === 'running'}
                   subtask={currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)}
-                  onUpdateTitle={(subtaskId, newTitle) => {
-                    updateSubtaskTitle(subtaskId, newTitle);
-                  }}
+                  onFinishGame={finishGameTask}
                 />
+              )}
+
+              {/* Tarea de Practicas especial */}
+              {currentTask && currentTask.name === 'Mac' && currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.name === 'Practicas' && currentTask.isStarted && (
+                <Paper sx={{ p: 3, mt: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Práctica Actual
+                  </Typography>
+                  <Typography variant="body1">
+                    {currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.subtasks?.find(c => c.id === currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.currentSubtaskId)?.name || 'N/A'}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => {
+                      const parentSubtaskId = currentTask.currentSubtaskId;
+                      const courseSubtaskId = currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.currentSubtaskId;
+                      if (parentSubtaskId && courseSubtaskId) {
+                        completeCourse(parentSubtaskId, courseSubtaskId);
+                      }
+                    }}
+                    sx={{ mt: 2 }}
+                  >
+                    Terminé la Práctica
+                  </Button>
+                </Paper>
+              )}
+
+              {/* Tarea de Related especial */}
+              {currentTask && currentTask.name === 'Mac' && currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.name === 'Related' && currentTask.isStarted && (
+                <Paper sx={{ p: 3, mt: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Related Actual
+                  </Typography>
+                  <Typography variant="body1">
+                    {currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.subtasks?.find(c => c.id === currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.currentSubtaskId)?.name || 'N/A'}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => {
+                      const parentSubtaskId = currentTask.currentSubtaskId;
+                      const courseSubtaskId = currentTask.subtasks?.find(st => st.id === currentTask.currentSubtaskId)?.currentSubtaskId;
+                      if (parentSubtaskId && courseSubtaskId) {
+                        completeCourse(parentSubtaskId, courseSubtaskId);
+                      }
+                    }}
+                    sx={{ mt: 2 }}
+                  >
+                    Terminé el Related
+                  </Button>
+                </Paper>
               )}
             </Box>
           )}
@@ -236,6 +289,22 @@ const WeeklyPage: React.FC = () => {
             <Typography variant="body2">
               📈 Progreso: <strong>{progressPercentage}%</strong>
             </Typography>
+          </Paper>
+
+          <Paper sx={{ p: 3, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Agregar Cursos
+            </Typography>
+            <Box component="form" onSubmit={(e) => { e.preventDefault(); const courseName = (e.target as any).courseName.value; if (courseName) { addCourse('sub_mac_practicas', courseName); (e.target as any).courseName.value = ''; } }} sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">Prácticas</Typography>
+              <TextField name="courseName" label="Nuevo Curso de Práctica" variant="outlined" size="small" fullWidth />
+              <Button type="submit" variant="contained" sx={{ mt: 1 }}>Agregar</Button>
+            </Box>
+            <Box component="form" onSubmit={(e) => { e.preventDefault(); const courseName = (e.target as any).courseName.value; if (courseName) { addCourse('sub_mac_related', courseName); (e.target as any).courseName.value = ''; } }} sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">Related</Typography>
+              <TextField name="courseName" label="Nuevo Curso de Related" variant="outlined" size="small" fullWidth />
+              <Button type="submit" variant="contained" sx={{ mt: 1 }}>Agregar</Button>
+            </Box>
           </Paper>
           
           <Paper sx={{ p: 3 }}>

@@ -20,16 +20,16 @@ import { Subtask } from '@/types';
 interface GameTaskProps {
   isActive: boolean;
   subtask: Subtask | undefined;
-  onUpdateTitle: (subtaskId: string, newTitle: string) => void;
+  onFinishGame: (subtaskId: string, newTitle: string) => void;
 }
 
-const GameTask: React.FC<GameTaskProps> = ({ isActive, subtask, onUpdateTitle }) => {
+const GameTask: React.FC<GameTaskProps> = ({ isActive, subtask, onFinishGame }) => {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 
   const handleConfirmComplete = () => {
     if (!subtask || !newTitle.trim()) return;
-    onUpdateTitle(subtask.id, newTitle.trim());
+    onFinishGame(subtask.id, newTitle.trim());
     setShowCompleteDialog(false);
     setNewTitle('');
   };

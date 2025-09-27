@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Grid } from '@mui/material';
+import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { TrendingUp, Payment } from '@mui/icons-material';
 import { useWeeklyContext } from '@/contexts/WeeklyContext';
 import { usePaymentContext } from '@/contexts/PaymentContext';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { getHistory } from '../services/historyService';
+import { CompletedItem } from '../types';
 
 const StatsPage: React.FC = () => {
   const { weeklyTasks, dayState, fetchWeeklyTasks, fetchCurrentDay } = useWeeklyContext();
   const { payments, fetchPayments } = usePaymentContext();
+  const [history, setHistory] = useState<CompletedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Cargar todos los datos
@@ -18,6 +21,7 @@ const StatsPage: React.FC = () => {
         fetchWeeklyTasks(),
         fetchCurrentDay(),
         fetchPayments(),
+        getHistory().then(setHistory),
       ]);
       setLoading(false);
     };
@@ -80,58 +84,31 @@ const StatsPage: React.FC = () => {
 
       {/* Análisis detallado */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3, minHeight: 300 }}>
             <Typography variant="h6" gutterBottom>
-              Tareas Semanales del Día
+              Historial de Tiempos
             </Typography>
-            {weeklyTasks.map((task, index) => {
-              const isCompleted = dayState?.completedTasks.includes(task.id) || false;
-              const isCurrent = dayState?.currentTaskIndex === index;
-
-              return (
-                <Box key={task.id} sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  p: 1,
-                  mb: 1,
-                  backgroundColor: isCompleted ? 'success.light' : isCurrent ? 'primary.light' : 'transparent',
-                  borderRadius: 1,
-                }}>
-                  <Typography variant="body2">
-                    {index + 1}. {task.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {isCompleted ? '✅' : isCurrent ? '⏳' : '⭕'}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Paper>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, minHeight: 300 }}>
-            <Typography variant="h6" gutterBottom>
-              Historial de Lectura
-            </Typography>
-            {dayState?.readingHistory && dayState.readingHistory.length > 0 ? (
-              <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
-                {dayState.readingHistory.map((entry, index) => (
-                  <Box key={index} sx={{ mb: 1.5 }}>
-                    <Typography variant="body1"><strong>{entry.title}</strong></Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Formato: {entry.format} - Completado: {new Date(entry.completedDate).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Aún no has completado ningún libro.
-              </Typography>
-            )}
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tarea</TableCell>
+                    <TableCell>Fecha</TableCell>
+                    <TableCell>Tiempo Invertido (minutos)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {history.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{new Date(item.completedDate).toLocaleString()}</TableCell>
+                      <TableCell>{item.timeSpent ? (item.timeSpent / 60000).toFixed(2) : 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
         </Grid>
       </Grid>

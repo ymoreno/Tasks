@@ -35,6 +35,9 @@ export interface Subtask {
   order: number;
   movedToEnd: boolean;
   timeTracking: TimeTracking;
+  subtasks?: Subtask[];
+  currentSubtaskId?: string;
+  parentName?: string;
 }
 
 export interface WeeklyTask {
@@ -106,11 +109,19 @@ export interface Space {
 export interface Payment {
   id: string;
   name: string;
+  amount: number;
+  category: string;
   url?: string;
   description?: string;
-  createdAt: Date;
-  category?: string;
-  space?: SpaceType; // Espacio asociado a la compra
+  status: 'pendiente' | 'pagado' | 'en proceso';
+  dueDate?: string;
+  paidDate?: string;
+  notes?: string;
+  isRecurring: boolean;
+  recurrence?: 'mensual' | 'trimestral' | 'anual';
+  priority: number; // 1: Alta, 5: Baja
+  createdAt: string; // Cambiado a string para facilitar la serialización
+  updatedAt?: string;
 }
 
 // Tipos para respuestas de API
@@ -164,10 +175,13 @@ export interface WeeklyContextType {
   completeTask: () => Promise<void>;
   completeSubtask: () => Promise<void>;
   updateSubtaskTitle: (subtaskId: string, newTitle: string) => Promise<void>;
+  finishGameTask: (subtaskId: string, newTitle: string) => Promise<void>;
   updateTimer: (elapsedSeconds: number, state: TimerState) => Promise<void>;
   pauseTimer: () => Promise<void>;
   resumeTimer: () => Promise<void>;
   tickTimer: (newSeconds: number) => void;
+  addCourse: (parentSubtaskId: string, courseName: string) => Promise<void>;
+  completeCourse: (parentSubtaskId: string, courseSubtaskId: string) => Promise<void>;
 }
 
 export interface PaymentContextType {
@@ -197,4 +211,13 @@ export interface WeeklyTaskCardProps {
   task: WeeklyTask;
   isActive: boolean;
   onComplete?: () => void;
+}
+
+export interface CompletedItem {
+  id: string;
+  type: 'Game' | 'Book' | 'Course';
+  name: string;
+  completedDate: string; // ISO string
+  timeSpent?: number; // in milliseconds
+  parentId?: string; // Optional: ID of the parent task/subtask
 }

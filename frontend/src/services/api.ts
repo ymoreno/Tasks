@@ -257,6 +257,20 @@ export const weeklyService = {
     await api.post('/weekly/update-subtask-title', { subtaskId, newTitle });
   },
 
+  // Finalizar y rotar la subtarea de un juego
+  async finishGameTask(subtaskId: string, newTitle: string): Promise<void> {
+    await api.post('/weekly/finish-game-task', { subtaskId, newTitle });
+  },
+
+  // Agregar un nuevo curso a una subtarea
+  async addCourseToSubtask(parentSubtaskId: string, courseName: string): Promise<void> {
+    await api.post('/weekly/add-course', { parentSubtaskId, courseName });
+  },
+
+  async completeCourse(parentSubtaskId: string, courseSubtaskId: string): Promise<void> {
+    await api.post('/weekly/complete-course', { parentSubtaskId, courseSubtaskId });
+  },
+
   // Actualizar el estado del timer de la tarea Mac
   async updateTimerState(elapsedSeconds: number, state: 'running' | 'paused' | 'stopped'): Promise<DayState> {
     const response = await api.post<ApiResponse<{ dayState: DayState }>>('/weekly/timer', {
@@ -294,6 +308,11 @@ export const weeklyService = {
       date: new Date().toISOString().split('T')[0],
       progressPercentage: 0,
     };
+  },
+
+  async getUnfinishedCourses(): Promise<any[]> {
+    const response = await api.get<ApiResponse<any[]>>('/weekly/unfinished-courses');
+    return response.data.data || [];
   },
 };
 

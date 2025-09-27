@@ -276,4 +276,4 @@ router.get('/export/excel', async (req, res, next) => {
   }
 });
 
-export default router;
+export { router as fileRoutes };
