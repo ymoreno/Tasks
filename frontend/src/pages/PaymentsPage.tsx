@@ -32,7 +32,7 @@ import { Payment, SpaceType } from '@/types';
 import { spaceService } from '@/services/spaceService';
 
 const PaymentsPage: React.FC = () => {
-  const { payments, loading, error, fetchPayments, createPayment, updatePayment, deletePayment } = usePaymentContext();
+  const { payments, loading, error, fetchPayments, createPayment, updatePayment, deletePayment, executePayment } = usePaymentContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
@@ -184,21 +184,11 @@ const PaymentsPage: React.FC = () => {
   };
 
   const handleExecute = async (payment: Payment) => {
-    if (!payment.isRecurring) {
-      await updatePayment(payment.id, { status: 'pagado' });
-      return;
+    try {
+      await executePayment(payment.id);
+    } catch (error) {
+      console.error('Error ejecutando pago:', error);
     }
-
-    const newDueDate = new Date(payment.dueDate || Date.now());
-    if (payment.recurrence === 'mensual') {
-      newDueDate.setMonth(newDueDate.getMonth() + 1);
-    } else if (payment.recurrence === 'trimestral') {
-      newDueDate.setMonth(newDueDate.getMonth() + 3);
-    } else if (payment.recurrence === 'anual') {
-      newDueDate.setFullYear(newDueDate.getFullYear() + 1);
-    }
-
-    await updatePayment(payment.id, { dueDate: newDueDate.toISOString().split('T')[0] });
   };
 
   if (loading) {

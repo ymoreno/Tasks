@@ -11,15 +11,16 @@ self.onmessage = (e: MessageEvent) => {
 
   switch (command) {
     case 'start':
-      totalTime = payload.totalTime ?? 0;
-      isActive = true;
-      sessionStart = Date.now() - (payload.sessionTime ?? 0);
+      if (!isActive) {
+        sessionStart = Date.now() - (payload?.sessionTime ?? 0);
+        isActive = true;
+      }
       
       if (interval) clearInterval(interval);
       interval = setInterval(() => {
         const sessionTime = Date.now() - sessionStart;
         self.postMessage({ type: 'tick', time: totalTime + sessionTime });
-      }, 100); // Update more frequently for better accuracy
+      }, 100);
       break;
 
     case 'pause':
@@ -38,6 +39,14 @@ self.onmessage = (e: MessageEvent) => {
       totalTime = 0;
       sessionStart = 0;
       self.postMessage({ type: 'tick', time: 0 });
+      break;
+
+    case 'set_time':
+      totalTime = payload.totalTime ?? 0;
+      if (!isActive) {
+        sessionStart = Date.now();
+      }
+      self.postMessage({ type: 'tick', time: totalTime });
       break;
   }
 };

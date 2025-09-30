@@ -7,38 +7,54 @@ export const useTimer = (initialTotalTime: number, isActive: boolean, startTime:
   const [currentTime, setCurrentTime] = useState(initialTotalTime);
   const workerRef = useRef<Worker | null>(null);
 
+  // Effect to create and manage the worker lifecycle
   useEffect(() => {
-    // Create the worker instance
-    const worker = new Worker(new URL('../workers/timer.worker.ts', import.meta.url), {
-      type: 'module'
-    });
-    workerRef.current = worker;
-
-    // Listen for messages from the worker
-    worker.onmessage = (e: MessageEvent) => {
-      if (e.data.type === 'tick') {
-        setCurrentTime(e.data.time);
-      }
-    };
-
-    // Start the timer in the worker if it was already active
-    if (isActive && startTime) {
-      const sessionTime = Date.now() - new Date(startTime).getTime();
-      worker.postMessage({ 
-        command: 'start', 
-        payload: { totalTime: initialTotalTime, sessionTime }
+    // Create worker only once
+    if (!workerRef.current) {
+      const worker = new Worker(new URL('../workers/timer.worker.ts', import.meta.url), {
+        type: 'module'
       });
+      workerRef.current = worker;
     }
 
-    // Cleanup on unmount
+    // On component unmount, we don't do anything, so the worker persists.
     return () => {
-      worker.terminate();
+      // Optional: you might want to send a 'pause' command when the component unmounts
+      // if (workerRef.current) {
+      //   workerRef.current.postMessage({ command: 'pause' });
+      // }
     };
   }, []); // Empty dependency array ensures this runs only once
 
-  const start = (startTime: number) => {
+  // Effect to control the timer and handle messages
+  useEffect(() => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ command: 'start', payload: { totalTime: startTime } });
+      // Set up message listener for this instance
+      workerRef.current.onmessage = (e: MessageEvent) => {
+        if (e.data.type === 'tick') {
+          setCurrentTime(e.data.time);
+        }
+      };
+
+      if (isActive && startTime) {
+        const sessionTime = Date.now() - new Date(startTime).getTime();
+        workerRef.current.postMessage({
+          command: 'set_time',
+          payload: { totalTime: initialTotalTime }
+        });
+        workerRef.current.postMessage({ 
+          command: 'start', 
+          payload: { sessionTime }
+        });
+      } else {
+        workerRef.current.postMessage({ command: 'pause' });
+      }
+    }
+  }, [isActive, startTime, initialTotalTime]);
+
+  const start = () => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ command: 'start' });
     }
   };
 
@@ -58,8 +74,12 @@ export const useTimer = (initialTotalTime: number, isActive: boolean, startTime:
     if (workerRef.current && startTime) {
         const sessionTime = Date.now() - new Date(startTime).getTime();
         workerRef.current.postMessage({ 
+            command: 'set_time', 
+            payload: { totalTime: totalTime }
+        });
+        workerRef.current.postMessage({ 
             command: 'start', 
-            payload: { totalTime: totalTime, sessionTime: sessionTime }
+            payload: { sessionTime: sessionTime }
         });
     }
   };

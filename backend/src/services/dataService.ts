@@ -475,6 +475,53 @@ export class PaymentService {
     return payments[paymentIndex];
   }
 
+  static async executePayment(paymentId: string): Promise<{ executedPayment: Payment | null, updatedPayment?: Payment }> {
+    const payments = await this.getAllPayments();
+    const paymentIndex = payments.findIndex(p => p.id === paymentId);
+    if (paymentIndex === -1) {
+      return { executedPayment: null };
+    }
+
+    const payment = payments[paymentIndex];
+
+    if (!payment.isRecurring) {
+      // 1. Add to history
+      await HistoryService.addToHistory({
+        id: payment.id,
+        type: 'Payment',
+        name: payment.name,
+        completedDate: new Date().toISOString(),
+      });
+
+      // 2. Remove from payments
+      payments.splice(paymentIndex, 1);
+      await this.saveAllPayments(payments);
+
+      return { executedPayment: { ...payment, status: 'pagado' } };
+    } else {
+      // 3. Update dueDate for recurring payments
+      const newDueDate = new Date(payment.dueDate || Date.now());
+      if (payment.recurrence === 'mensual') {
+        newDueDate.setMonth(newDueDate.getMonth() + 1);
+      } else if (payment.recurrence === 'trimestral') {
+        newDueDate.setMonth(newDueDate.getMonth() + 3);
+      } else if (payment.recurrence === 'anual') {
+        newDueDate.setFullYear(newDueDate.getFullYear() + 1);
+      }
+
+      const updatedPayment = {
+        ...payment,
+        dueDate: newDueDate.toISOString().split('T')[0],
+        priority: 2,
+      };
+
+      payments[paymentIndex] = updatedPayment;
+      await this.saveAllPayments(payments);
+
+      return { executedPayment: payment, updatedPayment };
+    }
+  }
+
   static async deletePayment(paymentId: string): Promise<boolean> {
     const payments = await this.getAllPayments();
     const paymentIndex = payments.findIndex(p => p.id === paymentId);
@@ -482,6 +529,18 @@ export class PaymentService {
     payments.splice(paymentIndex, 1);
     await this.saveAllPayments(payments);
     return true;
+  }
+
+  static async increasePriorities(): Promise<Payment[]> {
+    const payments = await this.getAllPayments();
+    const updatedPayments = payments.map(payment => {
+      if (payment.priority > 1) {
+        return { ...payment, priority: payment.priority - 1 };
+      }
+      return payment;
+    });
+    await this.saveAllPayments(updatedPayments);
+    return updatedPayments;
   }
 }
 

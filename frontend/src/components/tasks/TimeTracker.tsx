@@ -49,7 +49,7 @@ const TimeTracker: React.FC<TimeTrackerProps> = ({
     try {
       const updatedTask = await timeService.startTracking(taskId);
       setIsRunning(true);
-      start(updatedTask.timeTracking.totalTime);
+      start();
       onTimeUpdate?.(taskId, updatedTask.timeTracking);
     } catch (error) {
       console.error('Error iniciando seguimiento:', error);

@@ -31,9 +31,13 @@ const WeeklyPage: React.FC = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    fetchWeeklyTasks()
-    fetchCurrentDay()
-  }, [])
+    if (weeklyTasks.length === 0) {
+      fetchWeeklyTasks();
+    }
+    if (!dayState) {
+      fetchCurrentDay();
+    }
+  }, []);
 
   // Calcular progreso
   const totalTasks = weeklyTasks.length
@@ -69,19 +73,19 @@ const WeeklyPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary" gutterBottom>
             {completedToday} de {totalTasks} tareas completadas ({progressPercentage}%)
           </Typography>
-          <LinearProgress 
-            variant="determinate" 
-            value={progressPercentage} 
+          <LinearProgress
+            variant="determinate"
+            value={progressPercentage}
             sx={{ height: 8, borderRadius: 4 }}
           />
         </Box>
         <Typography variant="body2">
-          Fecha: {dayState?.date ? new Date(dayState.date).toLocaleDateString('es-ES', { 
+          Fecha: {dayState?.date ? new Date(dayState.date).toLocaleDateString('es-ES', {
             timeZone: 'UTC', // Forzar la zona horaria a UTC para evitar desfases
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           }) : 'Cargando...'}
         </Typography>
       </Paper>
@@ -104,7 +108,7 @@ const WeeklyPage: React.FC = () => {
                     return currentSubtask ? `${currentTask.name}: ${currentSubtask.name}` : currentTask.name;
                   })()}
                 </Typography>
-                
+
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                   {/* Botón Empezar Tarea - solo si no ha sido iniciada */}
                   {currentTask && !currentTask.isStarted && (
@@ -119,14 +123,14 @@ const WeeklyPage: React.FC = () => {
                       Empezar Tarea
                     </Button>
                   )}
-                  
+
                   {/* Botón Terminar Subtarea - solo para Tarea Mac y si tiene subtareas */}
                   {currentTask && currentTask.name === 'Mac' && currentTask.isStarted && currentTask.subtasks && currentTask.subtasks.length > 0 && (
                     <Button
                       variant="outlined"
                       startIcon={<SkipNext />}
                       size="large"
-                      onClick={completeTask} // Changed from completeSubtask
+                      onClick={completeSubtask} // Reverted to completeSubtask
                       disabled={loading}
                       color="secondary"
                     >

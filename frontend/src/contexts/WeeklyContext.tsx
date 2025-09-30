@@ -95,7 +95,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }
 
-  const completeTask = async () => {
+  const completeTask = useCallback(async () => {
     try {
       const result = await weeklyService.completeTask()
       
@@ -109,7 +109,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error completando tarea' })
     }
-  }
+  }, [])
 
   const completeSubtask = async () => {
     try {

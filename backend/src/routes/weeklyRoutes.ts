@@ -148,7 +148,9 @@ router.post('/complete-task', async (req, res, next) => {
 
     // Lógica específica para la tarea "Mac"
     if (currentTask.id === 'weekly_13') {
+      console.log('Rotating Mac subtask...');
       const macCycleCompleted = await WeeklyTaskService.rotateMacSubtask(currentTask.id);
+      console.log(`Mac cycle completed: ${macCycleCompleted}`);
 
       if (macCycleCompleted) {
         // Si el ciclo de subtareas de Mac se completó, marcar la tarea principal como hecha
@@ -176,16 +178,15 @@ router.post('/complete-task', async (req, res, next) => {
 
       } else {
         // Si el ciclo no se completó, solo se rotó la subtarea. La tarea principal sigue activa.
-        dayState = await WeeklyTaskService.getCurrentDayState(); // Recargar estado
-        const newWeeklyData = await WeeklyTaskService.getWeeklyData();
-        const updatedTask = newWeeklyData.sequence.find(t => t.id === currentTask.id);
-
+        const updatedWeeklyData = await WeeklyTaskService.getWeeklyData();
+        const updatedTask = updatedWeeklyData.sequence.find(t => t.id === currentTask.id);
+        
         return res.json({
           success: true,
           data: {
             completedTask: null, // No se completa la tarea principal
             nextTask: updatedTask, // La siguiente tarea es la misma (Mac)
-            dayState
+            dayState: dayState // Return the original dayState
           },
           message: 'Subtarea de Mac completada. La tarea continúa.'
         });
@@ -273,6 +274,54 @@ router.post('/complete-task', async (req, res, next) => {
     return next(error); // Added return
   }
 });
+
+// POST /api/weekly/complete-subtask - Completar subtarea actual
+router.post('/complete-subtask', async (req, res, next) => {
+  try {
+    const oldDayState = await WeeklyTaskService.getCurrentDayState();
+    const weeklyData = await WeeklyTaskService.getWeeklyData();
+
+    if (oldDayState.dayCompleted) {
+      throw createError('El día ya está completado', 400);
+    }
+
+    const currentTask = weeklyData.sequence[oldDayState.currentTaskIndex];
+
+    if (!currentTask) {
+      throw createError('No hay más tareas para hoy', 400);
+    }
+
+    // Lógica específica para la tarea "Mac"
+    if (currentTask.id === 'weekly_13') {
+      await WeeklyTaskService.rotateMacSubtask(currentTask.id);
+    }
+
+    const newDayState = await WeeklyTaskService.getCurrentDayState();
+    newDayState.timerState = oldDayState.timerState;
+    newDayState.timerElapsedSeconds = oldDayState.timerElapsedSeconds;
+    await WeeklyTaskService.updateDayState(newDayState);
+
+    const newWeeklyData = await WeeklyTaskService.getWeeklyData();
+    const updatedTask = newWeeklyData.sequence.find(t => t.id === currentTask.id);
+
+    const response: ApiResponse<{
+      currentTask: typeof updatedTask;
+      dayState: typeof newDayState;
+    }> = {
+      success: true,
+      data: {
+        currentTask: updatedTask,
+        dayState: newDayState
+      },
+      message: 'Subtarea completada. La tarea continúa.'
+    };
+
+    return res.json(response);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 
 // POST /api/weekly/update-subtask-title - Actualiza el título de una subtarea (para libros, juegos, etc.)
 router.post('/update-subtask-title', async (req, res, next) => {

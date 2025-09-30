@@ -59,7 +59,7 @@ export interface WeeklyTask {
 // New interface for completed items history
 export interface CompletedItem {
   id: string;
-  type: 'Game' | 'Book' | 'Course';
+  type: 'Game' | 'Book' | 'Course' | 'Payment';
   name: string;
   completedDate: string; // ISO string
   timeSpent?: number; // in milliseconds

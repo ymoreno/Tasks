@@ -356,6 +356,14 @@ export const paymentService = {
     await api.delete(`/payments/${paymentId}`);
   },
 
+  async executePayment(paymentId: string): Promise<{ executedPayment: Payment, updatedPayment?: Payment }> {
+    const response = await api.post<ApiResponse<{ executedPayment: Payment, updatedPayment?: Payment }>>(`/payments/${paymentId}/execute`);
+    if (!response.data.data) {
+      throw new Error('Error ejecutando pago');
+    }
+    return response.data.data;
+  },
+
   // Buscar pagos
   async searchPayments(query: string): Promise<Payment[]> {
     const response = await api.get<ApiResponse<Payment[]>>(`/payments/search/${encodeURIComponent(query)}`);

@@ -17,6 +17,7 @@ type PaymentAction =
   | { type: 'ADD_PAYMENT'; payload: Payment }
   | { type: 'UPDATE_PAYMENT'; payload: { paymentId: string; updates: Partial<Payment> } }
   | { type: 'DELETE_PAYMENT'; payload: string }
+  | { type: 'EXECUTE_PAYMENT'; payload: { paymentId: string, updatedPayment?: Payment } }
 
 const paymentReducer = (state: any, action: PaymentAction) => {
   switch (action.type) {
@@ -42,6 +43,23 @@ const paymentReducer = (state: any, action: PaymentAction) => {
         ...state,
         payments: state.payments.filter((payment: Payment) => payment.id !== action.payload)
       }
+    case 'EXECUTE_PAYMENT':
+      const { paymentId, updatedPayment } = action.payload;
+      const payment = state.payments.find((p: Payment) => p.id === paymentId);
+      if (payment && !payment.isRecurring) {
+        return {
+          ...state,
+          payments: state.payments.filter((p: Payment) => p.id !== paymentId),
+        };
+      } else if (updatedPayment) {
+        return {
+          ...state,
+          payments: state.payments.map((p: Payment) =>
+            p.id === paymentId ? updatedPayment : p
+          ),
+        };
+      }
+      return state;
     default:
       return state
   }
@@ -94,6 +112,16 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }
 
+  const executePayment = async (paymentId: string) => {
+    try {
+      const result = await paymentService.executePayment(paymentId);
+      dispatch({ type: 'EXECUTE_PAYMENT', payload: { paymentId, updatedPayment: result.updatedPayment } });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error ejecutando pago' });
+      throw error;
+    }
+  };
+
   const value: PaymentContextType = {
     payments: state.payments,
     loading: state.loading,
@@ -102,6 +130,7 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
     createPayment,
     updatePayment,
     deletePayment,
+    executePayment,
   }
 
   return <PaymentContext.Provider value={value}>{children}</PaymentContext.Provider>

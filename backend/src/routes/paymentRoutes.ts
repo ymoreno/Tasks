@@ -98,24 +98,17 @@ const paymentData = {
 router.put('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, url, description, category } = req.body;
-    
+    const updates: Partial<Payment> = req.body;
+
     // Validación básica
-    if (name && name.trim() === '') {
+    if (updates.name && updates.name.trim() === '') {
       throw createError('El nombre no puede estar vacío', 400);
     }
     
     // Validar URL si se proporciona
-    if (url && !isValidUrl(url)) {
+    if (updates.url && !isValidUrl(updates.url)) {
       throw createError('La URL proporcionada no es válida', 400);
     }
-    
-    const updates: Partial<Payment> = {};
-    
-    if (name !== undefined) updates.name = name.trim();
-    if (url !== undefined) updates.url = url.trim() || undefined;
-    if (description !== undefined) updates.description = description.trim() || undefined;
-    if (category !== undefined) updates.category = category.trim() || undefined;
     
     const updatedPayment = await PaymentService.updatePayment(id, updates);
     
@@ -135,6 +128,28 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
+// POST /api/payments/:id/execute - Ejecutar un pago
+router.post('/:id/execute', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await PaymentService.executePayment(id);
+
+    if (!result.executedPayment) {
+      throw createError('Pago no encontrado', 404);
+    }
+
+    const response: ApiResponse<{ executedPayment: Payment | null, updatedPayment?: Payment }> = {
+      success: true,
+      data: result,
+      message: 'Pago ejecutado exitosamente'
+    };
+
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // DELETE /api/payments/:id - Eliminar pago/compra
 router.delete('/:id', async (req, res, next) => {
   try {
@@ -148,6 +163,23 @@ router.delete('/:id', async (req, res, next) => {
     const response: ApiResponse<null> = {
       success: true,
       message: 'Pago/compra eliminado exitosamente'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/payments/increase-priorities - Aumentar la prioridad de todos los pagos
+router.post('/increase-priorities', async (req, res, next) => {
+  try {
+    const updatedPayments = await PaymentService.increasePriorities();
+    
+    const response: ApiResponse<Payment[]> = {
+      success: true,
+      data: updatedPayments,
+      message: 'Prioridades de los pagos aumentadas exitosamente'
     };
     
     res.json(response);
