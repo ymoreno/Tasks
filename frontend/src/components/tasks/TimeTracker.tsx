@@ -22,7 +22,7 @@ const TimeTracker: React.FC<TimeTrackerProps> = ({
   const { currentTime, start, pause, resume, stop } = useTimer(
     timeTracking.totalTime,
     timeTracking.isActive,
-    timeTracking.startTime
+    timeTracking.startTime ? timeTracking.startTime.toISOString() : null
   );
 
   useEffect(() => {
@@ -73,7 +73,7 @@ const TimeTracker: React.FC<TimeTrackerProps> = ({
     try {
       const updatedTask = await timeService.resumeTracking(taskId);
       setIsRunning(true);
-      resume(updatedTask.timeTracking.startTime, updatedTask.timeTracking.totalTime);
+      resume(updatedTask.timeTracking.startTime ? updatedTask.timeTracking.startTime.toISOString() : null, updatedTask.timeTracking.totalTime);
       onTimeUpdate?.(taskId, updatedTask.timeTracking);
     } catch (error) {
       console.error('Error reanudando seguimiento:', error);

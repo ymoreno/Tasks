@@ -118,10 +118,11 @@ export interface Payment {
   paidDate?: string;
   notes?: string;
   isRecurring: boolean;
-  recurrence?: 'mensual' | 'trimestral' | 'anual';
-  priority: number; // 1: Alta, 5: Baja
+  recurrence?: 'mensual' | 'trimestral' | 'semestral' | 'anual';
+  priority: number; // 1: Máxima (crítica), 10: Mínima (default)
   createdAt: string; // Cambiado a string para facilitar la serialización
   updatedAt?: string;
+  space?: SpaceType; // Espacio asociado a la compra
 }
 
 // Tipos para respuestas de API
@@ -130,6 +131,118 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+}
+
+// Tipos para finanzas personales
+export interface FinancialProfile {
+  id: string;
+  monthlyIncome: number;
+  distributionType: 'recommended' | 'custom';
+  categories: BudgetCategory[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BudgetCategory {
+  id: string;
+  name: string;
+  type: 'necessity' | 'want' | 'saving';
+  percentage: number;
+  budgetAmount: number;
+  spentAmount: number;
+  color: string;
+  description?: string;
+}
+
+export interface Expense {
+  id: string;
+  categoryId: string;
+  amount: number;
+  description: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface FinancialSummary {
+  totalIncome: number;
+  totalBudget: number;
+  totalSpent: number;
+  totalRemaining: number;
+  categoryBreakdown: {
+    categoryId: string;
+    categoryName: string;
+    budgeted: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+  }[];
+}
+
+export interface Debt {
+  id: string;
+  name: string;
+  type: 'credit_card' | 'bank_loan' | 'personal_loan' | 'mortgage' | 'vehicle_loan' | 'commercial_credit';
+  totalAmount: number;
+  currentBalance: number;
+  interestRate: number;
+  minimumPayment: number;
+  dueDate: string;
+  paymentFrequency: 'monthly' | 'biweekly' | 'weekly';
+  creditor: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  amount: number;
+  paymentDate: string;
+  paymentType: 'minimum' | 'extra' | 'full';
+  description?: string;
+  createdAt: string;
+}
+
+export interface DebtSummary {
+  totalDebt: number;
+  totalMinimumPayments: number;
+  totalInterestRate: number;
+  monthlyDebtLoad: number;
+  debtToIncomeRatio: number;
+  payoffProjections: {
+    debtId: string;
+    debtName: string;
+    monthsToPayoff: number;
+    totalInterestToPay: number;
+  }[];
+}
+
+export interface FinanceContextType {
+  profile: FinancialProfile | null;
+  expenses: Expense[];
+  debts: Debt[];
+  debtPayments: DebtPayment[];
+  summary: FinancialSummary | null;
+  debtSummary: DebtSummary | null;
+  loading: boolean;
+  error: string | null;
+  createProfile: (income: number, distributionType: 'recommended' | 'custom') => Promise<void>;
+  updateProfile: (updates: Partial<FinancialProfile>) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
+  updateExpense: (expenseId: string, updates: Partial<Expense>) => Promise<void>;
+  deleteExpense: (expenseId: string) => Promise<void>;
+  addDebt: (debt: Omit<Debt, 'id' | 'createdAt'>) => Promise<void>;
+  updateDebt: (debtId: string, updates: Partial<Debt>) => Promise<void>;
+  deleteDebt: (debtId: string) => Promise<void>;
+  addDebtPayment: (payment: Omit<DebtPayment, 'id' | 'createdAt'>) => Promise<void>;
+  fetchProfile: () => Promise<void>;
+  fetchExpenses: () => Promise<void>;
+  fetchDebts: () => Promise<void>;
+  fetchDebtPayments: () => Promise<void>;
+  calculateSummary: () => Promise<void>;
+  calculateDebtSummary: () => Promise<void>;
 }
 
 // Tipos para estadísticas
@@ -158,9 +271,8 @@ export interface TaskContextType {
   error: string | null;
   fetchTasks: () => Promise<void>;
   createTask: (category: string, taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
-  generateRandomScores: () => Promise<void>;
+  updateTask: (category: string, taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (category: string, taskId: string) => Promise<void>;
 }
 
 export interface WeeklyContextType {
@@ -192,6 +304,9 @@ export interface PaymentContextType {
   createPayment: (paymentData: Omit<Payment, 'id' | 'createdAt'>) => Promise<void>;
   updatePayment: (paymentId: string, updates: Partial<Payment>) => Promise<void>;
   deletePayment: (paymentId: string) => Promise<void>;
+  executePayment: (paymentId: string) => Promise<void>;
+  decreasePriorities: () => Promise<number>;
+  getPaymentHistory: () => Promise<Payment[]>;
 }
 
 // Tipos para componentes

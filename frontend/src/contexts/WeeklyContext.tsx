@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react'
+import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react'
 import { WeeklyTask, DayState, WeeklyContextType } from '@/types'
 import { weeklyService } from '@/services/api'
 
@@ -145,7 +145,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateTimer = async (elapsedSeconds: number, timerState: 'running' | 'paused' | 'stopped') => {
     try {
-      const updatedDayState = await weeklyService.updateTimerState(elapsedSeconds, timerState);
+      const updatedDayState = await weeklyService.updateTimer(elapsedSeconds, timerState);
       dispatch({ type: 'SET_DAY_STATE', payload: updatedDayState });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error updating timer' });
@@ -164,16 +164,27 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  const tickTimer = (newSeconds: number) => {
+  const tickTimer = useCallback((newSeconds: number) => {
     dispatch({ type: 'SET_TIMER_LOCALLY', payload: { elapsedSeconds: newSeconds } });
-  };
+    
+    // Persistir cada 10 segundos para no sobrecargar el servidor
+    if (newSeconds % 10 === 0) {
+      updateTimer(newSeconds, 'running').catch(error => {
+        console.warn('Error persistiendo timer:', error);
+      });
+    }
+  }, [updateTimer]);
 
   const addCourse = async (parentSubtaskId: string, courseName: string) => {
     try {
-      await weeklyService.addCourseToSubtask(parentSubtaskId, courseName);
+      const result = await weeklyService.addCourseToSubtask(parentSubtaskId, courseName);
       await fetchWeeklyTasks();
+      
+      // Mostrar notificación de éxito
+      alert(`✅ ${result.message}: "${result.courseName}"`);
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error agregando curso' });
+      alert('❌ Error agregando curso. Inténtalo de nuevo.');
     }
   };
 

@@ -30,16 +30,15 @@ export interface Task {
 export interface Subtask {
   id: string;
   name: string;
-  title?: string; // Título del libro para subtareas de lectura
-  subtasks?: Subtask[];
+  completed: boolean;
+  order: number;
+  movedToEnd: boolean;
+  timeTracking: TimeTracking;
+  subtasks?: Subtask[]; // Permitir subtareas anidadas
+  title?: string; // Para títulos de libros/juegos
+  subtaskRotation?: 'weekly' | 'completion' | 'dailyOrCompletion' | 'onStartOrCompletion';
+  randomizeNext?: boolean;
   currentSubtaskId?: string;
-  order?: number;
-  movedToEnd?: boolean;
-  timeTracking?: {
-    isActive: boolean;
-    totalTime: number;
-    sessions: any[];
-  };
 }
 
 export interface WeeklyTask {
@@ -52,7 +51,7 @@ export interface WeeklyTask {
   order: number;
   timeTracking: TimeTracking;
   isStarted?: boolean;
-  subtaskRotation?: 'weekly' | 'completion';
+  subtaskRotation?: 'weekly' | 'completion' | 'onStartOrCompletion';
   currentSubtaskId?: string;
 }
 
@@ -131,10 +130,11 @@ export interface Payment {
   paidDate?: string;
   notes?: string;
   isRecurring: boolean;
-  recurrence?: 'mensual' | 'trimestral' | 'anual';
-  priority: number; // 1: Alta, 5: Baja
-  createdAt: Date;
-  updatedAt?: Date;
+  recurrence?: 'mensual' | 'trimestral' | 'semestral' | 'anual';
+  priority: number; // 1: Máxima (crítica), 10: Mínima (default)
+  createdAt: string; // Cambiado a string para facilitar la serialización
+  updatedAt?: string;
+  space?: SpaceType; // Espacio asociado a la compra
 }
 
 // Tipos para respuestas de API
@@ -143,6 +143,92 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+}
+
+// Tipos para finanzas personales
+export interface FinancialProfile {
+  id: string;
+  monthlyIncome: number;
+  distributionType: 'recommended' | 'custom';
+  categories: BudgetCategory[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BudgetCategory {
+  id: string;
+  name: string;
+  type: 'necessity' | 'want' | 'saving';
+  percentage: number;
+  budgetAmount: number;
+  spentAmount: number;
+  color: string;
+  description?: string;
+}
+
+export interface Expense {
+  id: string;
+  categoryId: string;
+  amount: number;
+  description: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface FinancialSummary {
+  totalIncome: number;
+  totalBudget: number;
+  totalSpent: number;
+  totalRemaining: number;
+  categoryBreakdown: {
+    categoryId: string;
+    categoryName: string;
+    budgeted: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+  }[];
+}
+
+export interface Debt {
+  id: string;
+  name: string;
+  type: 'credit_card' | 'bank_loan' | 'personal_loan' | 'mortgage' | 'vehicle_loan' | 'commercial_credit';
+  totalAmount: number;
+  currentBalance: number;
+  interestRate: number;
+  minimumPayment: number;
+  dueDate: string;
+  paymentFrequency: 'monthly' | 'biweekly' | 'weekly';
+  creditor: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  amount: number;
+  paymentDate: string;
+  paymentType: 'minimum' | 'extra' | 'full';
+  description?: string;
+  createdAt: string;
+}
+
+export interface DebtSummary {
+  totalDebt: number;
+  totalMinimumPayments: number;
+  totalInterestRate: number;
+  monthlyDebtLoad: number;
+  debtToIncomeRatio: number;
+  payoffProjections: {
+    debtId: string;
+    debtName: string;
+    monthsToPayoff: number;
+    totalInterestToPay: number;
+  }[];
 }
 
 // Tipos para estadísticas

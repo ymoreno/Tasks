@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApiResponse, Task, WeeklyTask, DayState, Payment, TimeStats } from '@/types';
+import { ApiResponse, Task, WeeklyTask, DayState, Payment, TimeStats, FinancialProfile, Expense, FinancialSummary } from '@/types';
 import { offlineCache } from './offlineCache';
 import { networkStatus } from './networkStatus';
 
@@ -262,10 +262,7 @@ export const weeklyService = {
     await api.post('/weekly/finish-game-task', { subtaskId, newTitle });
   },
 
-  // Agregar un nuevo curso a una subtarea
-  async addCourseToSubtask(parentSubtaskId: string, courseName: string): Promise<void> {
-    await api.post('/weekly/add-course', { parentSubtaskId, courseName });
-  },
+
 
   async completeCourse(parentSubtaskId: string, courseSubtaskId: string): Promise<void> {
     await api.post('/weekly/complete-course', { parentSubtaskId, courseSubtaskId });
@@ -310,18 +307,48 @@ export const weeklyService = {
     };
   },
 
+  // Actualizar timer
+  async updateTimer(elapsedSeconds: number, timerState: 'running' | 'paused' | 'stopped'): Promise<DayState> {
+    const response = await api.post<ApiResponse<DayState>>('/weekly/update-timer', {
+      elapsedSeconds,
+      timerState
+    });
+    if (!response.data.data) {
+      throw new Error('Error actualizando timer');
+    }
+    return response.data.data;
+  },
+
   async getUnfinishedCourses(): Promise<any[]> {
     const response = await api.get<ApiResponse<any[]>>('/weekly/unfinished-courses');
     return response.data.data || [];
+  },
+
+  // Agregar curso a subtarea
+  async addCourseToSubtask(parentSubtaskId: string, courseName: string): Promise<{ message: string; courseName: string }> {
+    const response = await api.post<ApiResponse<{ message: string; courseName: string }>>('/weekly/add-course', {
+      parentSubtaskId,
+      courseName
+    });
+    if (!response.data.data) {
+      throw new Error('Error agregando curso');
+    }
+    return response.data.data;
   },
 };
 
 // Servicios para Pagos y Compras
 export const paymentService = {
-  // Obtener todos los pagos
+  // Obtener todos los pagos con soporte offline
   async getAllPayments(): Promise<Payment[]> {
-    const response = await api.get<ApiResponse<Payment[]>>('/payments');
-    return response.data.data || [];
+    return handleOfflineRequest(
+      async () => {
+        const response = await api.get<ApiResponse<Payment[]>>('/payments');
+        return response.data.data || [];
+      },
+      'payments_all',
+      [] // Fallback vacío
+    );
   },
 
   // Obtener pago por ID
@@ -356,12 +383,25 @@ export const paymentService = {
     await api.delete(`/payments/${paymentId}`);
   },
 
-  async executePayment(paymentId: string): Promise<{ executedPayment: Payment, updatedPayment?: Payment }> {
-    const response = await api.post<ApiResponse<{ executedPayment: Payment, updatedPayment?: Payment }>>(`/payments/${paymentId}/execute`);
+  async executePayment(paymentId: string): Promise<{ moved: boolean; newPayment?: Payment }> {
+    const response = await api.post<ApiResponse<{ moved: boolean; newPayment?: Payment }>>(`/payments/${paymentId}/execute`);
     if (!response.data.data) {
       throw new Error('Error ejecutando pago');
     }
     return response.data.data;
+  },
+
+  async decreasePriorities(): Promise<{ updatedCount: number }> {
+    const response = await api.post<ApiResponse<{ updatedCount: number }>>('/payments/decrease-priorities');
+    if (!response.data.data) {
+      throw new Error('Error disminuyendo prioridades');
+    }
+    return response.data.data;
+  },
+
+  async getPaymentHistory(): Promise<Payment[]> {
+    const response = await api.get<ApiResponse<Payment[]>>('/payments/history');
+    return response.data.data || [];
   },
 
   // Buscar pagos
@@ -493,6 +533,74 @@ export const fileService = {
     });
     return response.data;
   },
+};
+
+// Servicios para Finanzas Personales
+export const financeService = {
+  // Obtener perfil financiero
+  async getProfile(): Promise<FinancialProfile | null> {
+    const response = await api.get<ApiResponse<FinancialProfile | null>>('/finance/profile');
+    return response.data.data || null;
+  },
+
+  // Crear perfil financiero
+  async createProfile(monthlyIncome: number, distributionType: 'recommended' | 'custom'): Promise<FinancialProfile> {
+    const response = await api.post<ApiResponse<FinancialProfile>>('/finance/profile', {
+      monthlyIncome,
+      distributionType
+    });
+    if (!response.data.data) {
+      throw new Error('Error creando perfil financiero');
+    }
+    return response.data.data;
+  },
+
+  // Actualizar perfil financiero
+  async updateProfile(updates: Partial<FinancialProfile>): Promise<FinancialProfile> {
+    const response = await api.put<ApiResponse<FinancialProfile>>('/finance/profile', updates);
+    if (!response.data.data) {
+      throw new Error('Error actualizando perfil financiero');
+    }
+    return response.data.data;
+  },
+
+  // Obtener gastos
+  async getExpenses(): Promise<Expense[]> {
+    const response = await api.get<ApiResponse<Expense[]>>('/finance/expenses');
+    return response.data.data || [];
+  },
+
+  // Agregar gasto
+  async addExpense(expense: Omit<Expense, 'id' | 'createdAt'>): Promise<Expense> {
+    const response = await api.post<ApiResponse<Expense>>('/finance/expenses', expense);
+    if (!response.data.data) {
+      throw new Error('Error agregando gasto');
+    }
+    return response.data.data;
+  },
+
+  // Actualizar gasto
+  async updateExpense(expenseId: string, updates: Partial<Expense>): Promise<Expense> {
+    const response = await api.put<ApiResponse<Expense>>(`/finance/expenses/${expenseId}`, updates);
+    if (!response.data.data) {
+      throw new Error('Error actualizando gasto');
+    }
+    return response.data.data;
+  },
+
+  // Eliminar gasto
+  async deleteExpense(expenseId: string): Promise<void> {
+    await api.delete(`/finance/expenses/${expenseId}`);
+  },
+
+  // Obtener resumen financiero
+  async getSummary(): Promise<FinancialSummary> {
+    const response = await api.get<ApiResponse<FinancialSummary>>('/finance/summary');
+    if (!response.data.data) {
+      throw new Error('Error obteniendo resumen financiero');
+    }
+    return response.data.data;
+  }
 };
 
 export default api;

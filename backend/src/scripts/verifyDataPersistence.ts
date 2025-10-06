@@ -75,7 +75,7 @@ async function verifyDataPersistence() {
     logger.info('🧪 Probando operaciones CRUD...');
 
     // Crear tarea de prueba
-    const testTask = await TaskService.createTask('Prueba', {
+    const testTask = await TaskService.createTask({
       category: 'Prueba',
       name: 'Tarea de Verificación',
       scores: [1, 2, 3],
@@ -114,7 +114,12 @@ async function verifyDataPersistence() {
     // Crear una operación que genere respaldo
     await PaymentService.createPayment({
       name: 'Test Backup',
-      description: 'Prueba de respaldo automático'
+      description: 'Prueba de respaldo automático',
+      category: 'Test',
+      amount: 1000,
+      status: 'pendiente',
+      isRecurring: false,
+      priority: 5
     });
     
     const backupFilesAfter = fs.readdirSync(backupDir).length;

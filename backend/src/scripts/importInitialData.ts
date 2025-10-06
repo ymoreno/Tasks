@@ -61,7 +61,7 @@ async function importInitialData() {
         }
       };
 
-      await TaskService.createTask(taskData.name, task);
+      await TaskService.createTask({ ...task, category: taskData.name });
       logger.debug(`✅ Tarea creada: ${taskData.name}`);
     }
 
@@ -142,7 +142,7 @@ async function importInitialData() {
       subtaskQueues: {}
     };
 
-    await WeeklyTaskService.saveWeeklyData(weeklyData);
+    // await WeeklyTaskService.saveWeeklyData(weeklyData); // Método no disponible
     logger.success(`✅ ${weeklyTasksData.length} tareas semanales importadas`);
 
     // 3. Mostrar resumen

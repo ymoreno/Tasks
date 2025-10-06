@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react'
-import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert, TextField } from '@mui/material'
+import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert } from '@mui/material'
 import { Start, SkipNext } from '@mui/icons-material'
 import { useWeeklyContext } from '@/contexts/WeeklyContext'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import TaskTimer from '@/components/weekly/TaskTimer'
 import ReadingTask from '@/components/weekly/ReadingTask'
 import GameTask from '@/components/weekly/GameTask'
+import RotationSummary from '@/components/weekly/RotationSummary'
 
 const WeeklyPage: React.FC = () => {
   const {
@@ -21,11 +22,9 @@ const WeeklyPage: React.FC = () => {
     completeSubtask,
     updateSubtaskTitle,
     finishGameTask,
-    updateTimer,
     pauseTimer,
     resumeTimer,
     tickTimer,
-    addCourse,
     completeCourse
   } = useWeeklyContext()
 
@@ -110,6 +109,8 @@ const WeeklyPage: React.FC = () => {
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                  {/* 🔍 DEBUG: Removed infinite loop debugging */}
+
                   {/* Botón Empezar Tarea - solo si no ha sido iniciada */}
                   {currentTask && !currentTask.isStarted && (
                     <Button
@@ -130,7 +131,7 @@ const WeeklyPage: React.FC = () => {
                       variant="outlined"
                       startIcon={<SkipNext />}
                       size="large"
-                      onClick={completeSubtask} // Reverted to completeSubtask
+                      onClick={completeSubtask}
                       disabled={loading}
                       color="secondary"
                     >
@@ -142,6 +143,7 @@ const WeeklyPage: React.FC = () => {
                   {currentTask && (
                     <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
                       Estado: {currentTask.isStarted ? '🟢 En progreso' : '⭕ No iniciada'}
+    
                     </Typography>
                   )}
                 </Box>
@@ -276,54 +278,11 @@ const WeeklyPage: React.FC = () => {
           </Paper>
         </Grid>
         
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Estadísticas del Día
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              📊 Total de tareas: <strong>{totalTasks}</strong>
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              ✅ Completadas hoy: <strong>{completedToday}</strong>
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              ⏳ Tarea actual: <strong>{currentTask?.name || 'N/A'}</strong>
-            </Typography>
-            <Typography variant="body2">
-              📈 Progreso: <strong>{progressPercentage}%</strong>
-            </Typography>
-          </Paper>
-
-          <Paper sx={{ p: 3, mt: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Agregar Cursos
-            </Typography>
-            <Box component="form" onSubmit={(e) => { e.preventDefault(); const courseName = (e.target as any).courseName.value; if (courseName) { addCourse('sub_mac_practicas', courseName); (e.target as any).courseName.value = ''; } }} sx={{ mt: 2 }}>
-              <Typography variant="subtitle1">Prácticas</Typography>
-              <TextField name="courseName" label="Nuevo Curso de Práctica" variant="outlined" size="small" fullWidth />
-              <Button type="submit" variant="contained" sx={{ mt: 1 }}>Agregar</Button>
-            </Box>
-            <Box component="form" onSubmit={(e) => { e.preventDefault(); const courseName = (e.target as any).courseName.value; if (courseName) { addCourse('sub_mac_related', courseName); (e.target as any).courseName.value = ''; } }} sx={{ mt: 2 }}>
-              <Typography variant="subtitle1">Related</Typography>
-              <TextField name="courseName" label="Nuevo Curso de Related" variant="outlined" size="small" fullWidth />
-              <Button type="submit" variant="contained" sx={{ mt: 1 }}>Agregar</Button>
-            </Box>
-          </Paper>
-          
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Tareas Especiales
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • <strong>Lista</strong>: Selecciona una tarea aleatoria de las tareas generales
-              <br />
-              • <strong>Portátil</strong>: Se divide en Laptop vs Mac (Algoritmos → Related IA)
-              <br />
-              • <strong>Subtareas</strong>: Se gestionan automáticamente
-            </Typography>
-          </Paper>
+        {/* Resumen de Rotaciones - Al final de la página */}
+        <Grid item xs={12}>
+          <RotationSummary />
         </Grid>
+
       </Grid>
     </Box>
   )

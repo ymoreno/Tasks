@@ -9,10 +9,10 @@ import {
   useMediaQuery 
 } from '@mui/material'
 import { 
-  Assignment, 
   Schedule, 
   Payment, 
   Analytics, 
+  AccountBalance,
   History, 
   List 
 } from '@mui/icons-material'
@@ -28,14 +28,15 @@ const Navigation: React.FC = () => {
     const path = location.pathname
     if (path === '/' || path === '/weekly') return 0
     if (path === '/payments') return 1
-    if (path === '/stats') return 2
-    if (path === '/history') return 3
-    if (path === '/unfinished-courses') return 4
+    if (path === '/finances') return 2
+    if (path === '/stats') return 3
+    if (path === '/history') return 4
+    if (path === '/unfinished-courses') return 5
     return 0
   }
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const routes = ['/weekly', '/payments', '/stats', '/history', '/unfinished-courses']
+    const routes = ['/weekly', '/payments', '/finances', '/stats', '/history', '/unfinished-courses']
     navigate(routes[newValue])
   }
 
@@ -78,6 +79,12 @@ const Navigation: React.FC = () => {
           <Tab
             icon={<Payment />}
             label={isMobile ? 'Pagos' : 'Pagos y Compras'}
+            iconPosition="start"
+            sx={{ gap: 1 }}
+          />
+          <Tab
+            icon={<AccountBalance />}
+            label={isMobile ? 'Finanzas' : 'Gestor Financiero'}
             iconPosition="start"
             sx={{ gap: 1 }}
           />

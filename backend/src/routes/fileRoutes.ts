@@ -96,7 +96,7 @@ router.post('/import/csv', upload.single('file'), async (req, res, next) => {
         }
       };
       
-      const newTask = await TaskService.createTask(categoryName.trim(), taskData);
+      const newTask = await TaskService.createTask({ ...taskData, category: categoryName.trim() });
       importedTasks.push(newTask);
     }
     
@@ -178,7 +178,7 @@ router.post('/import/excel', upload.single('file'), async (req, res, next) => {
         };
         
         // Nota: En un entorno real, esto debería ser asíncrono y manejado correctamente
-        TaskService.createTask(categoryName.toString().trim(), taskData)
+        TaskService.createTask({ ...taskData, category: categoryName.toString().trim() })
           .then(newTask => importedTasks.push(newTask))
           .catch(error => console.error('Error creando tarea:', error));
       });

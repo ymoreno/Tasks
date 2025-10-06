@@ -51,14 +51,16 @@ async function testDataServices() {
 
     // Probar actualización de estado del día
     const originalIndex = dayState.currentTaskIndex;
-    await WeeklyTaskService.updateDayState({ currentTaskIndex: originalIndex + 1 });
+    const currentState = await WeeklyTaskService.getCurrentDayState();
+    await WeeklyTaskService.updateDayState({ ...currentState, currentTaskIndex: originalIndex + 1 });
     const updatedDayState = await WeeklyTaskService.getCurrentDayState();
     
     if (updatedDayState.currentTaskIndex === originalIndex + 1) {
       logger.info(`   ✅ Estado del día actualizado correctamente`);
       
       // Revertir cambio
-      await WeeklyTaskService.updateDayState({ currentTaskIndex: originalIndex });
+      const currentState = await WeeklyTaskService.getCurrentDayState();
+      await WeeklyTaskService.updateDayState({ ...currentState, currentTaskIndex: originalIndex });
     }
 
     // 3. Probar PaymentService
@@ -72,7 +74,11 @@ async function testDataServices() {
       name: 'Producto de Prueba',
       url: 'https://example.com/producto',
       description: 'Descripción de prueba',
-      category: 'Tecnología'
+      category: 'Tecnología',
+      amount: 100000,
+      status: 'pendiente',
+      isRecurring: false,
+      priority: 5
     });
     
     logger.info(`   ✅ Pago creado: ${testPayment.name}`);

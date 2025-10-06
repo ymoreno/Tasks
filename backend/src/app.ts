@@ -9,9 +9,11 @@ import config, { validateConfig } from './config';
 
 // Importar rutas
 import { weeklyRoutes } from './routes/weeklyRoutes';
+import taskRoutes from './routes/taskRoutes';
 import { paymentRoutes } from './routes/paymentRoutes';
 import { timeRoutes } from './routes/timeRoutes';
 import { fileRoutes } from './routes/fileRoutes';
+import { financeRoutes } from './routes/financeRoutes';
 import historyRoutes from './routes/historyRoutes';
 
 // Importar middleware
@@ -58,9 +60,11 @@ app.use('/uploads', express.static(config.paths.uploads));
 
 // Rutas de la API
 app.use(`${config.api.prefix}/weekly`, weeklyRoutes);
+app.use(`${config.api.prefix}/tasks`, taskRoutes);
 app.use(`${config.api.prefix}/payments`, paymentRoutes);
 app.use(`${config.api.prefix}/time`, timeRoutes);
 app.use(`${config.api.prefix}/files`, fileRoutes);
+app.use(`${config.api.prefix}/finance`, financeRoutes);
 app.use(`${config.api.prefix}/history`, historyRoutes);
 
 // Ruta de salud del servidor

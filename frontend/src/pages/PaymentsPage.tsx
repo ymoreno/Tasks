@@ -44,7 +44,7 @@ const PaymentsPage: React.FC = () => {
     space: undefined as SpaceType | undefined,
     priority: 5,
     isRecurring: false,
-    recurrence: 'mensual' as 'mensual' | 'trimestral' | 'anual',
+    recurrence: 'mensual' as 'mensual' | 'trimestral' | 'semestral' | 'anual',
     dueDate: '',
   });
 
@@ -54,7 +54,7 @@ const PaymentsPage: React.FC = () => {
   }, []);
 
   // Filtrar pagos por búsqueda
-  const filteredPayments = payments.filter(payment =>
+  const filteredPayments = (Array.isArray(payments) ? payments : []).filter(payment =>
     payment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.category?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -62,7 +62,8 @@ const PaymentsPage: React.FC = () => {
 
   // Calcular estadísticas y item de mayor prioridad
   const { highestPriorityPayment, ...stats } = useMemo(() => {
-    if (payments.length === 0) {
+    const paymentsArray = Array.isArray(payments) ? payments : [];
+    if (paymentsArray.length === 0) {
       return {
         highestPriorityPayment: null,
         totalPayments: 0,
@@ -72,12 +73,12 @@ const PaymentsPage: React.FC = () => {
       };
     }
 
-    const totalPayments = payments.length;
-    const paymentsWithUrl = payments.filter(p => p.url).length;
+    const totalPayments = paymentsArray.length;
+    const paymentsWithUrl = paymentsArray.filter(p => p.url).length;
     const paymentsWithoutUrl = totalPayments - paymentsWithUrl;
-    const categories = [...new Set(payments.map(p => p.category).filter(Boolean))];
+    const categories = [...new Set(paymentsArray.map(p => p.category).filter(Boolean))];
     
-    const sortedPayments = [...payments].sort((a, b) => {
+    const sortedPayments = [...paymentsArray].sort((a, b) => {
       if (a.priority !== b.priority) {
         return a.priority - b.priority;
       }
@@ -435,11 +436,16 @@ const PaymentsPage: React.FC = () => {
               label="Prioridad"
               onChange={(e) => setFormData({ ...formData, priority: e.target.value as number })}
             >
-              <MenuItem value={1}>1 (Alta)</MenuItem>
-              <MenuItem value={2}>2</MenuItem>
+              <MenuItem value={1}>1 (Crítica)</MenuItem>
+              <MenuItem value={2}>2 (Alta)</MenuItem>
               <MenuItem value={3}>3</MenuItem>
               <MenuItem value={4}>4</MenuItem>
-              <MenuItem value={5}>5 (Baja)</MenuItem>
+              <MenuItem value={5}>5 (Media)</MenuItem>
+              <MenuItem value={6}>6</MenuItem>
+              <MenuItem value={7}>7</MenuItem>
+              <MenuItem value={8}>8</MenuItem>
+              <MenuItem value={9}>9</MenuItem>
+              <MenuItem value={10}>10 (Baja)</MenuItem>
             </Select>
           </FormControl>
           <FormControlLabel
@@ -458,6 +464,7 @@ const PaymentsPage: React.FC = () => {
                 >
                   <MenuItem value="mensual">Mensual</MenuItem>
                   <MenuItem value="trimestral">Trimestral</MenuItem>
+                  <MenuItem value="semestral">Semestral</MenuItem>
                   <MenuItem value="anual">Anual</MenuItem>
                 </Select>
               </FormControl>

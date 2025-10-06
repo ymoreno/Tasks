@@ -134,14 +134,12 @@ router.post('/:id/execute', async (req, res, next) => {
     const { id } = req.params;
     const result = await PaymentService.executePayment(id);
 
-    if (!result.executedPayment) {
-      throw createError('Pago no encontrado', 404);
-    }
-
-    const response: ApiResponse<{ executedPayment: Payment | null, updatedPayment?: Payment }> = {
+    const response: ApiResponse<{ moved: boolean; newPayment?: Payment }> = {
       success: true,
       data: result,
-      message: 'Pago ejecutado exitosamente'
+      message: result.moved 
+        ? 'Pago ejecutado y movido al histórico' 
+        : 'Pago ejecutado y renovado para próxima fecha'
     };
 
     res.json(response);
@@ -171,15 +169,32 @@ router.delete('/:id', async (req, res, next) => {
   }
 });
 
-// POST /api/payments/increase-priorities - Aumentar la prioridad de todos los pagos
-router.post('/increase-priorities', async (req, res, next) => {
+// POST /api/payments/decrease-priorities - Disminuir la prioridad de todos los pagos (inicio de mes)
+router.post('/decrease-priorities', async (req, res, next) => {
   try {
-    const updatedPayments = await PaymentService.increasePriorities();
+    const updatedCount = await PaymentService.decreasePriorities();
+    
+    const response: ApiResponse<{ updatedCount: number }> = {
+      success: true,
+      data: { updatedCount },
+      message: `Prioridades disminuidas para ${updatedCount} pagos`
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/payments/history - Obtener histórico de pagos
+router.get('/history', async (req, res, next) => {
+  try {
+    const history = await PaymentService.getPaymentHistory();
     
     const response: ApiResponse<Payment[]> = {
       success: true,
-      data: updatedPayments,
-      message: 'Prioridades de los pagos aumentadas exitosamente'
+      data: history,
+      message: 'Histórico de pagos obtenido exitosamente'
     };
     
     res.json(response);

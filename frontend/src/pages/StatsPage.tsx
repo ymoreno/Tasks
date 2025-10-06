@@ -4,6 +4,7 @@ import { TrendingUp, Payment } from '@mui/icons-material';
 import { useWeeklyContext } from '@/contexts/WeeklyContext';
 import { usePaymentContext } from '@/contexts/PaymentContext';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import TaskStatistics from '@/components/stats/TaskStatistics';
 import { getHistory } from '../services/historyService';
 import { CompletedItem } from '../types';
 
@@ -13,20 +14,31 @@ const StatsPage: React.FC = () => {
   const [history, setHistory] = useState<CompletedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar todos los datos
+  // Cargar todos los datos solo si no están disponibles
   useEffect(() => {
     const loadAllData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchWeeklyTasks(),
-        fetchCurrentDay(),
-        fetchPayments(),
-        getHistory().then(setHistory),
-      ]);
+      const promises = [];
+      
+      // Solo cargar datos que no estén disponibles
+      if (weeklyTasks.length === 0) {
+        promises.push(fetchWeeklyTasks());
+      }
+      if (!dayState) {
+        promises.push(fetchCurrentDay());
+      }
+      if (payments.length === 0) {
+        promises.push(fetchPayments());
+      }
+      
+      // Siempre cargar el historial ya que es específico de esta página
+      promises.push(getHistory().then(setHistory));
+      
+      await Promise.all(promises);
       setLoading(false);
     };
     loadAllData();
-  }, []);
+  }, [weeklyTasks.length, dayState, payments.length]);
 
   // Calcular estadísticas
   const weeklyProgress = weeklyTasks.length > 0 && dayState
@@ -82,12 +94,19 @@ const StatsPage: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Estadísticas por Tarea */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12}>
+          <TaskStatistics />
+        </Grid>
+      </Grid>
+
       {/* Análisis detallado */}
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Paper sx={{ p: 3, minHeight: 300 }}>
             <Typography variant="h6" gutterBottom>
-              Historial de Tiempos
+              Historial Detallado de Tiempos
             </Typography>
             <TableContainer component={Paper}>
               <Table>

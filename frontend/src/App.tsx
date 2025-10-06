@@ -15,15 +15,18 @@ const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage'))
 const StatsPage = React.lazy(() => import('./pages/StatsPage'))
 const HistoryPage = React.lazy(() => import('./pages/HistoryPage'))
 const UnfinishedCoursesPage = React.lazy(() => import('./pages/UnfinishedCoursesPage'))
+const FinancesPage = React.lazy(() => import('./pages/FinancesPage'))
 
 // Importar contextos
 import { WeeklyProvider } from './contexts/WeeklyContext'
 import { PaymentProvider } from './contexts/PaymentContext'
+import { FinanceProvider } from './contexts/FinanceContext'
 
 function App() {
   return (
     <WeeklyProvider>
       <PaymentProvider>
+        <FinanceProvider>
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
           {/* Header principal */}
           <Header />
@@ -39,6 +42,7 @@ function App() {
                 <Route path="/weekly" element={<WeeklyPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/stats" element={<StatsPage />} />
+                <Route path="/finances" element={<FinancesPage />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/unfinished-courses" element={<UnfinishedCoursesPage />} />
                 <Route path="*" element={
@@ -57,6 +61,7 @@ function App() {
           {/* Estado offline */}
           <OfflineStatus />
         </Box>
+        </FinanceProvider>
       </PaymentProvider>
     </WeeklyProvider>
   )

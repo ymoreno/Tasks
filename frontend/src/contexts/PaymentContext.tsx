@@ -77,8 +77,9 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
     dispatch({ type: 'SET_LOADING', payload: true })
     try {
       const payments = await paymentService.getAllPayments()
-      dispatch({ type: 'SET_PAYMENTS', payload: payments })
+      dispatch({ type: 'SET_PAYMENTS', payload: Array.isArray(payments) ? payments : [] })
     } catch (error) {
+      console.error('Error cargando pagos:', error)
       dispatch({ type: 'SET_ERROR', payload: 'Error cargando pagos' })
     }
   }
@@ -88,6 +89,7 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
       const newPayment = await paymentService.createPayment(paymentData)
       dispatch({ type: 'ADD_PAYMENT', payload: newPayment })
     } catch (error) {
+      console.error('Error creando pago:', error)
       dispatch({ type: 'SET_ERROR', payload: 'Error creando pago' })
     }
   }
@@ -115,9 +117,36 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
   const executePayment = async (paymentId: string) => {
     try {
       const result = await paymentService.executePayment(paymentId);
-      dispatch({ type: 'EXECUTE_PAYMENT', payload: { paymentId, updatedPayment: result.updatedPayment } });
+      if (result.moved) {
+        // Si se movió al histórico, eliminarlo de la lista
+        dispatch({ type: 'DELETE_PAYMENT', payload: paymentId });
+      } else if (result.newPayment) {
+        // Si se renovó, actualizar con el nuevo pago
+        dispatch({ type: 'UPDATE_PAYMENT', payload: { paymentId, updates: result.newPayment } });
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error ejecutando pago' });
+      throw error;
+    }
+  };
+
+  const decreasePriorities = async () => {
+    try {
+      const result = await paymentService.decreasePriorities();
+      // Recargar pagos para reflejar los cambios
+      await fetchPayments();
+      return result.updatedCount;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error disminuyendo prioridades' });
+      throw error;
+    }
+  };
+
+  const getPaymentHistory = async () => {
+    try {
+      return await paymentService.getPaymentHistory();
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error obteniendo histórico' });
       throw error;
     }
   };
@@ -131,6 +160,8 @@ export const PaymentProvider: React.FC<{ children: ReactNode }> = ({ children })
     updatePayment,
     deletePayment,
     executePayment,
+    decreasePriorities,
+    getPaymentHistory,
   }
 
   return <PaymentContext.Provider value={value}>{children}</PaymentContext.Provider>
