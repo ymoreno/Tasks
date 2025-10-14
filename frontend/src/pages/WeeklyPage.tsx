@@ -4,6 +4,7 @@ import { Start, SkipNext } from '@mui/icons-material'
 import { useWeeklyContext } from '@/contexts/WeeklyContext'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import TaskTimer from '@/components/weekly/TaskTimer'
+import TaskNotes from '@/components/weekly/TaskNotes'
 import ReadingTask from '@/components/weekly/ReadingTask'
 import GameTask from '@/components/weekly/GameTask'
 import RotationSummary from '@/components/weekly/RotationSummary'
@@ -25,7 +26,8 @@ const WeeklyPage: React.FC = () => {
     pauseTimer,
     resumeTimer,
     tickTimer,
-    completeCourse
+    completeCourse,
+    updateTaskNotes
   } = useWeeklyContext()
 
   // Cargar datos al montar el componente
@@ -109,8 +111,6 @@ const WeeklyPage: React.FC = () => {
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                  {/* 🔍 DEBUG: Removed infinite loop debugging */}
-
                   {/* Botón Empezar Tarea - solo si no ha sido iniciada */}
                   {currentTask && !currentTask.isStarted && (
                     <Button
@@ -150,15 +150,25 @@ const WeeklyPage: React.FC = () => {
               </Paper>
 
               {/* Timer - Visible para cualquier tarea iniciada */}
-              {currentTask && currentTask.isStarted && dayState && dayState.timerState && (
+              {currentTask && currentTask.isStarted && dayState && (
                 <TaskTimer
                   taskName={currentTask.name}
                   elapsedSeconds={dayState.timerElapsedSeconds || 0}
-                  timerState={dayState.timerState}
+                  timerState={dayState.timerState || 'stopped'}
                   onTick={(newSeconds) => tickTimer(newSeconds)}
                   onPause={pauseTimer}
                   onResume={resumeTimer}
                   onComplete={completeTask}
+                />
+              )}
+
+
+
+              {/* Notas de la tarea actual */}
+              {currentTask && currentTask.isStarted && (
+                <TaskNotes
+                  task={currentTask}
+                  onUpdateNotes={updateTaskNotes}
                 />
               )}
 

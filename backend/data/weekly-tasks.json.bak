@@ -1,0 +1,772 @@
+{
+  "sequence": [
+    {
+      "id": "weekly_1",
+      "name": "Ejercicio",
+      "plannedDays": 7,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 1,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "isStarted": true
+    },
+    {
+      "id": "weekly_2",
+      "name": "Casa",
+      "plannedDays": 7,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 2,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "isStarted": true
+    },
+    {
+      "id": "weekly_3",
+      "name": "Leer",
+      "plannedDays": 7,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 3,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "subtaskRotation": "weekly",
+      "currentSubtaskId": "sub_leer_fisico",
+      "notes": "Leyendo 'Guía de Supervivencia Zombie'. Muy interesante los capítulos sobre fortificación.",
+      "subtasks": [
+        {
+          "id": "sub_leer_fisico",
+          "name": "Fisico",
+          "title": "Guia de Supervivencia Zombie"
+        },
+        {
+          "id": "sub_leer_prestado",
+          "name": "Prestado",
+          "title": "Mas alla de las estrellas"
+        },
+        {
+          "id": "sub_leer_kindle",
+          "name": "Kindle",
+          "title": "Corazones Perdidos"
+        },
+        {
+          "id": "sub_leer_pcnovela",
+          "name": "PC Novela",
+          "title": "Rechicero"
+        },
+        {
+          "id": "sub_leer_cell",
+          "name": "Cell",
+          "title": "El trono vacio"
+        },
+        {
+          "id": "sub_leer_comics",
+          "name": "Comics",
+          "title": "5 elementos",
+          "readers": [
+            "PC",
+            "Fisico",
+            "Tablet",
+            "Laptop"
+          ],
+          "currentReader": "PC"
+        },
+        {
+          "id": "sub_leer_tablet",
+          "name": "Tablet",
+          "title": "El último deseo"
+        },
+        {
+          "id": "sub_leer_extra",
+          "name": "Extra",
+          "title": "Némesis"
+        }
+      ],
+      "isStarted": true
+    },
+    {
+      "id": "weekly_4",
+      "name": "Juego",
+      "plannedDays": 7,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 4,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "currentSubtaskId": "sub_juego_ps3",
+      "subtasks": [
+        {
+          "id": "sub_juego_retro",
+          "name": "Retro",
+          "title": "FFIV"
+        },
+        {
+          "id": "sub_juego_ps2",
+          "name": "Ps2",
+          "title": "Diablo II"
+        },
+        {
+          "id": "sub_juego_psp",
+          "name": "PSP",
+          "title": "Final Fantasy IV The After Years"
+        },
+        {
+          "id": "sub_juego_ps3",
+          "name": "PS3",
+          "title": "CTR"
+        },
+        {
+          "id": "sub_juego_wii",
+          "name": "Wii",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_laptop",
+          "name": "Laptop",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_steam",
+          "name": "Steam",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_ps4",
+          "name": "PS4",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_epic",
+          "name": "Epic",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_gog",
+          "name": "GoG",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_ubi",
+          "name": "Ubi",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_amazon",
+          "name": "Amazon",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_retro_pro",
+          "name": "Retro pro",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_indiegala",
+          "name": "IndieGala",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_blizzard",
+          "name": "Blizzard",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_origin",
+          "name": "Origin",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_ps5",
+          "name": "PS5",
+          "title": "*"
+        },
+        {
+          "id": "sub_juego_switch",
+          "name": "Switch",
+          "title": "*"
+        }
+      ],
+      "isStarted": true,
+      "notes": "Epic -  Subnautica\nSteam - Manejo\nGoG - Tren\nPrime - "
+    },
+    {
+      "id": "weekly_13",
+      "name": "Mac",
+      "plannedDays": 3,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 5,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "subtaskRotation": "dailyOrCompletion",
+      "currentSubtaskId": "sub_mac_related",
+      "notes": "Trabajando en el proyecto Gaia. Implementando nuevas funcionalidades de backend.",
+      "subtasks": [
+        {
+          "id": "sub_mac_algoritmos",
+          "name": "Algoritmos"
+        },
+        {
+          "id": "sub_mac_java",
+          "name": "Java"
+        },
+        {
+          "id": "sub_mac_empleo",
+          "name": "Empleo"
+        },
+        {
+          "id": "sub_mac_entrevista",
+          "name": "Entrevista"
+        },
+        {
+          "id": "sub_mac_software_gaia",
+          "name": "Software - Gaia"
+        },
+        {
+          "id": "sub_mac_software_echoes",
+          "name": "Software - Echoes"
+        },
+        {
+          "id": "sub_mac_practicas",
+          "name": "Practicas",
+          "subtaskRotation": "completion",
+          "randomizeNext": true,
+          "currentSubtaskId": "sub_practicas_scrum_master",
+          "subtasks": [
+            {
+              "id": "sub_practicas_scrum_master",
+              "name": "Scrum Master"
+            },
+            {
+              "id": "sub_practicas_game_design_theory",
+              "name": "Game Design Theory"
+            },
+            {
+              "id": "sub_practicas_hongos",
+              "name": "Hongos"
+            },
+            {
+              "id": "sub_practicas_kanban",
+              "name": "Kanban"
+            },
+            {
+              "id": "sub_practicas_aws_cloudformation",
+              "name": "AWS CloudFormation"
+            },
+            {
+              "id": "sub_practicas_react",
+              "name": "React"
+            },
+            {
+              "id": "sub_practicas_worldbuilding",
+              "name": "Worldbuilding"
+            },
+            {
+              "id": "sub_practicas_hidroponia",
+              "name": "Hidroponia"
+            },
+            {
+              "id": "sub_practicas_java",
+              "name": "Java"
+            },
+            {
+              "id": "sub_practicas_python",
+              "name": "Python"
+            },
+            {
+              "id": "sub_practicas_blender",
+              "name": "Blender"
+            },
+            {
+              "id": "sub_practicas_docker",
+              "name": "Docker"
+            },
+            {
+              "id": "sub_practicas_gcp",
+              "name": "GCP"
+            },
+            {
+              "id": "sub_practicas_aws_architect",
+              "name": "AWS Architect"
+            },
+            {
+              "id": "sub_practicas_unity",
+              "name": "Unity"
+            },
+            {
+              "id": "sub_practicas_unity_5",
+              "name": "Unity 5"
+            },
+            {
+              "id": "sub_practicas_unreal",
+              "name": "Unreal"
+            },
+            {
+              "id": "sub_practicas_go",
+              "name": "Go"
+            },
+            {
+              "id": "sub_practicas_algoritmos_desde_cero",
+              "name": "Algoritmos desde cero"
+            },
+            {
+              "id": "sub_practicas_logica_de_programacion",
+              "name": "Logica de Programacion"
+            },
+            {
+              "id": "sub_practicas_data_analysis",
+              "name": "Data Analysis"
+            },
+            {
+              "id": "sub_practicas_algoritmos",
+              "name": "Algoritmos"
+            },
+            {
+              "id": "sub_practicas_sqlite_for_python",
+              "name": "SQLite for Python"
+            },
+            {
+              "id": "sub_practicas_search_engine",
+              "name": "Search engine"
+            },
+            {
+              "id": "sub_practicas_java_game_development",
+              "name": "Java Game Development"
+            },
+            {
+              "id": "sub_practicas_automate_with_python",
+              "name": "Automate with Python"
+            },
+            {
+              "id": "sub_sub_mac_practicas_introducción_a_la_escritura_narrativa",
+              "name": "Introducción a la escritura narrativa",
+              "completed": false,
+              "order": 27,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_mac_practicas_test_prácticas_1759349813841",
+              "name": "Test Prácticas 1759349813841",
+              "completed": false,
+              "order": 28,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            }
+          ],
+          "title": "Prácticas - Curso 3"
+        },
+        {
+          "id": "sub_mac_related",
+          "name": "Related",
+          "subtaskRotation": "completion",
+          "randomizeNext": true,
+          "currentSubtaskId": "sub_related_english",
+          "subtasks": [
+            {
+              "id": "sub_related_english",
+              "name": "English"
+            },
+            {
+              "id": "sub_related_javascript",
+              "name": "Javascript"
+            },
+            {
+              "id": "sub_related_spring_boot",
+              "name": "Spring Boot"
+            },
+            {
+              "id": "sub_sub_mac_related_docker",
+              "name": "Docker",
+              "completed": false,
+              "order": 4,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_ci/cd",
+              "name": "CI/CD",
+              "completed": false,
+              "order": 5,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_aws",
+              "name": "AWS",
+              "completed": false,
+              "order": 6,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_gestor_de_finanzas_personales",
+              "name": "Gestor de finanzas personales",
+              "completed": false,
+              "order": 7,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_gestor_de_biblioteca_personal",
+              "name": "Gestor de biblioteca personal",
+              "completed": false,
+              "order": 8,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_microservices.io",
+              "name": "microservices.io",
+              "completed": false,
+              "order": 9,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_scripting",
+              "name": "Scripting",
+              "completed": false,
+              "order": 10,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_sub_mac_related_tailwind_css",
+              "name": "Tailwind CSS",
+              "completed": false,
+              "order": 11,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            },
+            {
+              "id": "sub_mac_related_test_related_1759349813855",
+              "name": "Test Related 1759349813855",
+              "completed": false,
+              "order": 12,
+              "movedToEnd": false,
+              "timeTracking": {
+                "isActive": false,
+                "totalTime": 0,
+                "sessions": []
+              }
+            }
+          ]
+        }
+      ],
+      "isStarted": true
+    },
+    {
+      "id": "weekly_5",
+      "name": "Aero",
+      "plannedDays": 3,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 6,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "isStarted": false
+    },
+    {
+      "id": "weekly_6",
+      "name": "PC",
+      "plannedDays": 3,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 7,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "isStarted": false
+    },
+    {
+      "id": "weekly_7",
+      "name": "Lista",
+      "plannedDays": 2,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 9,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      },
+      "subtaskRotation": "onStartOrCompletion",
+      "currentSubtaskId": "sub_lista_musica",
+      "subtasks": [
+        {
+          "id": "sub_lista_arreglarme",
+          "name": "Arreglarme"
+        },
+        {
+          "id": "sub_lista_musica",
+          "name": "Musica"
+        },
+        {
+          "id": "sub_lista_peliculas",
+          "name": "Peliculas",
+          "subtaskRotation": "weekly",
+          "currentSubtaskId": "sub_peliculas_ap_par_dis",
+          "subtasks": [
+            {
+              "id": "sub_peliculas_dvd",
+              "name": "DVD"
+            },
+            {
+              "id": "sub_peliculas_downloaded",
+              "name": "Downloaded"
+            },
+            {
+              "id": "sub_peliculas_netflix",
+              "name": "Netflix"
+            },
+            {
+              "id": "sub_peliculas_max",
+              "name": "Max"
+            },
+            {
+              "id": "sub_peliculas_prime",
+              "name": "Prime"
+            },
+            {
+              "id": "sub_peliculas_crunchyroll",
+              "name": "Crunchy Roll"
+            },
+            {
+              "id": "sub_peliculas_online",
+              "name": "Online"
+            },
+            {
+              "id": "sub_peliculas_ap_par_dis",
+              "name": "AP/Par/Dis"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "weekly_9",
+      "name": "Plantas",
+      "plannedDays": 1,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 8,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      }
+    },
+    {
+      "id": "weekly_12",
+      "name": "Escribir",
+      "plannedDays": 1,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 11,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      }
+    },
+    {
+      "id": "weekly_10",
+      "name": "Carro",
+      "plannedDays": 1,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 12,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      }
+    },
+    {
+      "id": "weekly_11",
+      "name": "Dibujar",
+      "plannedDays": 1,
+      "completedDays": 0,
+      "weeklySchedule": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "order": 13,
+      "timeTracking": {
+        "isActive": false,
+        "totalTime": 0,
+        "sessions": []
+      }
+    }
+  ],
+  "dailyState": {
+    "date": "2025-10-08",
+    "currentTaskIndex": 5,
+    "completedTasks": [
+      "weekly_1",
+      "weekly_2",
+      "weekly_3",
+      "weekly_4",
+      "weekly_13"
+    ],
+    "dayCompleted": false,
+    "subtaskQueues": {},
+    "timerElapsedSeconds": 30,
+    "timerState": "stopped"
+  }
+}

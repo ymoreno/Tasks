@@ -122,7 +122,7 @@ const StatsPage: React.FC = () => {
                     <TableRow key={item.id}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{new Date(item.completedDate).toLocaleString()}</TableCell>
-                      <TableCell>{item.timeSpent ? (item.timeSpent / 60000).toFixed(2) : 'N/A'}</TableCell>
+                      <TableCell>{item.timeSpent ? (item.timeSpent / 60).toFixed(2) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

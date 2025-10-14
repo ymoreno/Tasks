@@ -1,5 +1,21 @@
 import axios from 'axios';
-import { ApiResponse, Task, WeeklyTask, DayState, Payment, TimeStats, FinancialProfile, Expense, FinancialSummary } from '@/types';
+import { 
+  ApiResponse, 
+  Task, 
+  WeeklyTask, 
+  DayState, 
+  Payment, 
+  TimeStats, 
+  FinancialProfile, 
+  Expense, 
+  FinancialSummary,
+  Debt,
+  DebtPayment,
+  DebtSummary,
+  DebtMetrics,
+  BudgetDistribution,
+  DebtBudgetSettings
+} from '@/types';
 import { offlineCache } from './offlineCache';
 import { networkStatus } from './networkStatus';
 
@@ -335,6 +351,17 @@ export const weeklyService = {
     }
     return response.data.data;
   },
+
+  // Actualizar notas de una tarea
+  async updateTaskNotes(taskId: string, notes: string): Promise<WeeklyTask> {
+    const response = await api.put<ApiResponse<WeeklyTask>>(`/weekly/task/${taskId}/notes`, {
+      notes
+    });
+    if (!response.data.data) {
+      throw new Error('Error actualizando notas de la tarea');
+    }
+    return response.data.data;
+  },
 };
 
 // Servicios para Pagos y Compras
@@ -544,7 +571,7 @@ export const financeService = {
   },
 
   // Crear perfil financiero
-  async createProfile(monthlyIncome: number, distributionType: 'recommended' | 'custom'): Promise<FinancialProfile> {
+  async createProfile(monthlyIncome: number, distributionType: 'recommended' | 'custom' | 'debt-aware'): Promise<FinancialProfile> {
     const response = await api.post<ApiResponse<FinancialProfile>>('/finance/profile', {
       monthlyIncome,
       distributionType
@@ -598,6 +625,239 @@ export const financeService = {
     const response = await api.get<ApiResponse<FinancialSummary>>('/finance/summary');
     if (!response.data.data) {
       throw new Error('Error obteniendo resumen financiero');
+    }
+    return response.data.data;
+  },
+
+  // --- New Debt-Aware Budget Methods ---
+
+  // Update budget distribution
+  async updateBudgetDistribution(distribution: BudgetDistribution): Promise<FinancialProfile> {
+    const response = await api.put<ApiResponse<FinancialProfile>>('/finance/budget-distribution', {
+      distribution
+    });
+    if (!response.data.data) {
+      throw new Error('Error updating budget distribution');
+    }
+    return response.data.data;
+  },
+
+  // Update debt settings
+  async updateDebtSettings(debtSettings: DebtBudgetSettings): Promise<FinancialProfile> {
+    const response = await api.put<ApiResponse<FinancialProfile>>('/finance/debt-settings', {
+      debtSettings
+    });
+    if (!response.data.data) {
+      throw new Error('Error updating debt settings');
+    }
+    return response.data.data;
+  },
+
+  // Ensure debt category exists
+  async ensureDebtCategory(): Promise<FinancialProfile> {
+    const response = await api.post<ApiResponse<FinancialProfile>>('/finance/ensure-debt-category');
+    if (!response.data.data) {
+      throw new Error('Error ensuring debt category');
+    }
+    return response.data.data;
+  },
+
+  // Recalculate budget with current debts
+  async recalculateWithDebts(): Promise<{ profile: FinancialProfile; metrics: DebtMetrics }> {
+    const response = await api.post<ApiResponse<{ profile: FinancialProfile; metrics: DebtMetrics }>>('/finance/recalculate-with-debts');
+    if (!response.data.data) {
+      throw new Error('Error recalculating budget with debts');
+    }
+    return response.data.data;
+  },
+
+  // Get current debt metrics
+  async getDebtMetrics(): Promise<DebtMetrics> {
+    const response = await api.get<ApiResponse<DebtMetrics>>('/finance/debt-metrics');
+    if (!response.data.data) {
+      throw new Error('Error getting debt metrics');
+    }
+    return response.data.data;
+  },
+
+  // Migrate existing profile to support debt features
+  async migrateProfile(): Promise<FinancialProfile> {
+    const response = await api.post<ApiResponse<FinancialProfile>>('/finance/migrate-profile');
+    if (!response.data.data) {
+      throw new Error('Error migrating profile');
+    }
+    return response.data.data;
+  },
+
+  // Validate profile integrity
+  async validateProfile(): Promise<{ isValid: boolean; issues: string[]; fixes?: string[] }> {
+    const response = await api.get<ApiResponse<{ isValid: boolean; issues: string[]; fixes?: string[] }>>('/finance/validate-profile');
+    if (!response.data.data) {
+      throw new Error('Error validating profile');
+    }
+    return response.data.data;
+  }
+};
+
+// New Debt Service
+export const debtService = {
+  // --- Debt CRUD Operations ---
+
+  // Get all debts
+  async getDebts(): Promise<Debt[]> {
+    return handleOfflineRequest(
+      async () => {
+        const response = await api.get<ApiResponse<Debt[]>>('/debts');
+        return response.data.data || [];
+      },
+      'debts_all',
+      []
+    );
+  },
+
+  // Get specific debt
+  async getDebt(debtId: string): Promise<Debt> {
+    const response = await api.get<ApiResponse<Debt>>(`/debts/${debtId}`);
+    if (!response.data.data) {
+      throw new Error('Debt not found');
+    }
+    return response.data.data;
+  },
+
+  // Create new debt
+  async createDebt(debtData: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> {
+    const response = await api.post<ApiResponse<Debt>>('/debts', debtData);
+    if (!response.data.data) {
+      throw new Error('Error creating debt');
+    }
+    return response.data.data;
+  },
+
+  // Update debt
+  async updateDebt(debtId: string, updates: Partial<Debt>): Promise<Debt> {
+    const response = await api.put<ApiResponse<Debt>>(`/debts/${debtId}`, updates);
+    if (!response.data.data) {
+      throw new Error('Error updating debt');
+    }
+    return response.data.data;
+  },
+
+  // Delete debt
+  async deleteDebt(debtId: string): Promise<void> {
+    await api.delete(`/debts/${debtId}`);
+  },
+
+  // --- Debt Payment Operations ---
+
+  // Get payments for specific debt
+  async getDebtPayments(debtId: string): Promise<DebtPayment[]> {
+    const response = await api.get<ApiResponse<DebtPayment[]>>(`/debts/${debtId}/payments`);
+    return response.data.data || [];
+  },
+
+  // Add payment to debt
+  async addDebtPayment(debtId: string, paymentData: Omit<DebtPayment, 'id' | 'debtId' | 'createdAt'>): Promise<{ payment: DebtPayment; expense: any }> {
+    const response = await api.post<ApiResponse<{ payment: DebtPayment; expense: any }>>(`/debts/${debtId}/payments`, paymentData);
+    if (!response.data.data) {
+      throw new Error('Error adding debt payment');
+    }
+    return response.data.data;
+  },
+
+  // Delete payment
+  async deletePayment(paymentId: string): Promise<{ paymentDeleted: boolean; expenseRemoved: boolean }> {
+    const response = await api.delete<ApiResponse<{ paymentDeleted: boolean; expenseRemoved: boolean }>>(`/debts/payments/${paymentId}`);
+    if (!response.data.data) {
+      throw new Error('Error deleting payment');
+    }
+    return response.data.data;
+  },
+
+  // --- Debt Analytics and Calculations ---
+
+  // Calculate debt metrics
+  async calculateDebtMetrics(monthlyIncome: number): Promise<DebtMetrics> {
+    const response = await api.post<ApiResponse<DebtMetrics>>('/debts/metrics', {
+      monthlyIncome
+    });
+    if (!response.data.data) {
+      throw new Error('Error calculating debt metrics');
+    }
+    return response.data.data;
+  },
+
+  // Get recommended budget distribution
+  async getRecommendedDistribution(monthlyIncome: number): Promise<{ distribution: BudgetDistribution; metrics: DebtMetrics }> {
+    const response = await api.post<ApiResponse<{ distribution: BudgetDistribution; metrics: DebtMetrics }>>('/debts/distribution/recommended', {
+      monthlyIncome
+    });
+    if (!response.data.data) {
+      throw new Error('Error getting recommended distribution');
+    }
+    return response.data.data;
+  },
+
+  // Validate custom budget distribution
+  async validateDistribution(distribution: BudgetDistribution, monthlyIncome: number): Promise<{ validation: any; metrics: DebtMetrics }> {
+    const response = await api.post<ApiResponse<{ validation: any; metrics: DebtMetrics }>>('/debts/distribution/validate', {
+      distribution,
+      monthlyIncome
+    });
+    if (!response.data.data) {
+      throw new Error('Error validating distribution');
+    }
+    return response.data.data;
+  },
+
+  // Get debt summary with projections
+  async getDebtSummary(monthlyIncome: number): Promise<DebtSummary> {
+    const response = await api.post<ApiResponse<DebtSummary>>('/debts/summary', {
+      monthlyIncome
+    });
+    if (!response.data.data) {
+      throw new Error('Error getting debt summary');
+    }
+    return response.data.data;
+  },
+
+  // --- Debt-Expense Integration ---
+
+  // Validate payment against budget
+  async validatePaymentBudget(amount: number): Promise<{
+    isValid: boolean;
+    availableBudget: number;
+    exceedsBy?: number;
+    warning?: string;
+  }> {
+    const response = await api.post<ApiResponse<any>>('/debts/validate-payment-budget', {
+      amount
+    });
+    if (!response.data.data) {
+      throw new Error('Error validating payment budget');
+    }
+    return response.data.data;
+  },
+
+  // Get debt expense statistics
+  async getExpenseStatistics(): Promise<{
+    totalDebtPayments: number;
+    totalDebtExpenses: number;
+    currentMonthPayments: number;
+    averagePaymentAmount: number;
+    paymentsByDebt: { debtId: string; totalPaid: number; paymentCount: number }[];
+  }> {
+    const response = await api.get<ApiResponse<any>>('/debts/expense-statistics');
+    if (!response.data.data) {
+      throw new Error('Error getting expense statistics');
+    }
+    return response.data.data;
+  },
+
+  // Ensure debt category exists in budget
+  async ensureDebtCategoryInBudget(): Promise<any> {
+    const response = await api.post<ApiResponse<any>>('/debts/ensure-debt-category');
+    if (!response.data.data) {
+      throw new Error('Error ensuring debt category');
     }
     return response.data.data;
   }

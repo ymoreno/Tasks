@@ -29,11 +29,13 @@ router.get('/current-day', async (req, res, next) => {
     const weeklyData = await WeeklyTaskService.getWeeklyData();
     
     // Verificar si es un nuevo día en la zona horaria de Bogotá (GMT-5)
-    const today = WeeklyTaskService.getBogotaDate();
+    const now = new Date();
+    const bogotaNow = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const today = bogotaNow.toISOString().split('T')[0];
 
     if (dayState.date !== today) {
       // Si es lunes en Bogotá, ejecutar la rotación semanal
-      const isMonday = WeeklyTaskService.getBogotaDayOfWeek() === 1;
+      const isMonday = bogotaNow.getUTCDay() === 1;
       if (isMonday) {
         await WeeklyTaskService.updateWeeklyRotations();
       }
@@ -115,7 +117,7 @@ router.post('/start-task', async (req, res, next) => {
 
     // Iniciar el temporizador para la tarea.
     dayState.timerElapsedSeconds = 0;
-    dayState.timerState = 'running'; // CORRECTED: Start timer when user clicks "Start Task"
+    dayState.timerState = 'running';
     await WeeklyTaskService.updateDayState(dayState);
     
     const response: ApiResponse<{
@@ -169,7 +171,7 @@ router.post('/complete-task', async (req, res, next) => {
       } else {
         // Reiniciar timer para la siguiente tarea
         dayState.timerElapsedSeconds = 0;
-        dayState.timerState = 'stopped'; // CHANGED: No auto-start timer
+        dayState.timerState = 'running';
         
         // Marcar la siguiente tarea como iniciada
         const nextTask = weeklyData.sequence[dayState.currentTaskIndex];
@@ -226,7 +228,7 @@ router.post('/complete-task', async (req, res, next) => {
       } else {
         // Reiniciar timer para la siguiente tarea
         dayState.timerElapsedSeconds = 0;
-        dayState.timerState = 'stopped'; // CHANGED: No auto-start timer
+        dayState.timerState = 'running';
         
         // Marcar la siguiente tarea como iniciada
         const nextTask = weeklyData.sequence[dayState.currentTaskIndex];
@@ -254,33 +256,14 @@ router.post('/complete-task', async (req, res, next) => {
     // Solo guardar en historial tareas específicas (Leer, Juego, Mac)
     const shouldSaveToHistory = ['Leer', 'Juego', 'Mac'].includes(currentTask.name);
     if (dayState.timerElapsedSeconds && shouldSaveToHistory) {
-      // Obtener el título específico de la subtarea actual
-      let specificTitle = currentTask.name; // Fallback al nombre de la tarea
-      
-      if (currentTask.subtasks && currentTask.currentSubtaskId) {
-        const currentSubtask = currentTask.subtasks.find(sub => sub.id === currentTask.currentSubtaskId);
-        if (currentSubtask) {
-          // Para Mac, si está en Related o Practicas, obtener el curso específico
-          if (currentTask.name === 'Mac' && currentSubtask.subtasks && currentSubtask.currentSubtaskId) {
-            const currentCourse = currentSubtask.subtasks.find(course => course.id === currentSubtask.currentSubtaskId);
-            if (currentCourse) {
-              specificTitle = currentCourse.title || currentCourse.name;
-            }
-          } else {
-            // Para Leer y Juego, usar el título de la subtarea
-            specificTitle = currentSubtask.title || currentSubtask.name;
-          }
-        }
-      }
-      
       await HistoryService.addToHistory({
         id: currentTask.id,
         type: currentTask.name === 'Leer' ? 'Book' : currentTask.name === 'Juego' ? 'Game' : 'Course',
-        name: specificTitle, // Usar el título específico en lugar del nombre de la tarea
+        name: currentTask.name,
         timeSpent: dayState.timerElapsedSeconds,
         parentId: currentTask.id
       });
-      console.log(`📊 Tarea guardada en historial: ${specificTitle} - ${dayState.timerElapsedSeconds} segundos`);
+      console.log(`📊 Tarea guardada en historial: ${currentTask.name} - ${dayState.timerElapsedSeconds} segundos`);
     }
     dayState.completedTasks.push(currentTask.id);
     dayState.currentTaskIndex++;
@@ -344,29 +327,16 @@ router.post('/complete-subtask', async (req, res, next) => {
       // Si la rotación indica que debe completarse la tarea, usar la lógica de complete-task
       if (rotationResult.shouldCompleteTask) {
         
-        // Guardar tarea Mac en historial como Course con título específico
+        // Guardar tarea Mac en historial como Course
         if (oldDayState.timerElapsedSeconds) {
-          // Obtener el título específico del curso actual en Mac
-          let specificTitle = currentTask.name; // Fallback
-          
-          if (currentTask.subtasks && currentTask.currentSubtaskId) {
-            const currentSubtask = currentTask.subtasks.find(sub => sub.id === currentTask.currentSubtaskId);
-            if (currentSubtask && currentSubtask.subtasks && currentSubtask.currentSubtaskId) {
-              const currentCourse = currentSubtask.subtasks.find(course => course.id === currentSubtask.currentSubtaskId);
-              if (currentCourse) {
-                specificTitle = currentCourse.title || currentCourse.name;
-              }
-            }
-          }
-          
           await HistoryService.addToHistory({
             id: currentTask.id,
             type: 'Course',
-            name: specificTitle, // Usar el título específico del curso
+            name: currentTask.name,
             timeSpent: oldDayState.timerElapsedSeconds,
             parentId: currentTask.id
           });
-          console.log(`📊 Tarea Mac guardada en historial: ${specificTitle} - ${oldDayState.timerElapsedSeconds} segundos`);
+          console.log(`📊 Tarea Mac guardada en historial: ${currentTask.name} - ${oldDayState.timerElapsedSeconds} segundos`);
         }
         
         // Completar la tarea Mac
@@ -618,29 +588,6 @@ router.post('/add-course', async (req, res, next) => {
   }
 });
 
-// POST /api/weekly/complete-course - Completar curso específico
-router.post('/complete-course', async (req, res, next) => {
-  try {
-    const { parentSubtaskId, courseSubtaskId } = req.body;
-    
-    if (!parentSubtaskId || !courseSubtaskId) {
-      throw createError('parentSubtaskId y courseSubtaskId son requeridos', 400);
-    }
-    
-    await WeeklyTaskService.completeCourse(parentSubtaskId, courseSubtaskId);
-    
-    const response: ApiResponse<{ message: string }> = {
-      success: true,
-      data: { message: 'Curso completado exitosamente' },
-      message: 'Curso completado exitosamente'
-    };
-    
-    res.json(response);
-  } catch (error) {
-    next(error);
-  }
-});
-
 // GET /api/weekly/rotation-summary - Obtener resumen de rotaciones actuales
 router.get('/rotation-summary', async (req, res, next) => {
   try {
@@ -713,8 +660,8 @@ router.post('/reset-day', async (req, res, next) => {
       task.isStarted = false;
     }
     
-    // Resetear el estado del día usando la hora de Bogotá
-    const today = WeeklyTaskService.getBogotaDate();
+    // Resetear el estado del día
+    const today = new Date().toISOString().split('T')[0];
     weeklyData.dailyState = {
       date: today,
       currentTaskIndex: 0,
@@ -732,38 +679,6 @@ router.post('/reset-day', async (req, res, next) => {
       success: true,
       data: weeklyData.dailyState,
       message: `Estado del día reseteado exitosamente para ${today}`
-    };
-    
-    res.json(response);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// POST /api/weekly/reset-current-task - Reset solo de la tarea actual
-router.post('/reset-current-task', async (req, res, next) => {
-  try {
-    const weeklyData = await WeeklyTaskService.getWeeklyData();
-    const currentTask = weeklyData.sequence[weeklyData.dailyState.currentTaskIndex];
-    
-    if (!currentTask) {
-      throw createError('No hay tarea actual para resetear', 400);
-    }
-    
-    // Resetear solo la tarea actual
-    currentTask.isStarted = false;
-    
-    // Resetear el timer
-    weeklyData.dailyState.timerElapsedSeconds = 0;
-    weeklyData.dailyState.timerState = 'stopped';
-    
-    // Guardar los cambios
-    await WeeklyTaskService.updateWeeklyData(weeklyData);
-    
-    const response: ApiResponse<typeof currentTask> = {
-      success: true,
-      data: currentTask,
-      message: `Tarea ${currentTask.name} reseteada exitosamente`
     };
     
     res.json(response);

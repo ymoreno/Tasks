@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -27,7 +27,9 @@ import {
   TableRow,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Snackbar,
+  AlertTitle,
 } from '@mui/material';
 import {
   CreditCard,
@@ -40,41 +42,36 @@ import {
   Delete,
   Payment,
   TrendingDown,
-  Warning
+  Warning,
+  Info
 } from '@mui/icons-material';
-
-interface Debt {
-  id: string;
-  name: string;
-  type: 'credit_card' | 'bank_loan' | 'personal_loan' | 'mortgage' | 'vehicle_loan' | 'commercial_credit';
-  totalAmount: number;
-  currentBalance: number;
-  interestRate: number;
-  minimumPayment: number;
-  dueDate: string;
-  paymentFrequency: 'monthly' | 'biweekly' | 'weekly';
-  creditor: string;
-  description?: string;
-  isActive: boolean;
-  createdAt: string;
-}
-
-interface DebtPayment {
-  id: string;
-  debtId: string;
-  amount: number;
-  paymentDate: string;
-  paymentType: 'minimum' | 'extra' | 'full';
-  description?: string;
-  createdAt: string;
-}
+import { useFinanceContext } from '@/contexts/FinanceContext';
+import { Debt } from '@/types';
+import { debtService } from '@/services/api';
 
 const DebtManager: React.FC = () => {
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [payments, setPayments] = useState<DebtPayment[]>([]);
+  const {
+    debts,
+    debtPayments,
+    expenses,
+    profile,
+    debtMetrics,
+    budgetDistribution,
+    addDebt,
+
+    deleteDebt,
+    addDebtPayment,
+    fetchDebts,
+    fetchDebtPayments,
+    calculateDebtMetrics,
+    recalculateOnDebtChange
+  } = useFinanceContext();
+
   const [activeTab, setActiveTab] = useState(0);
   const [debtDialogOpen, setDebtDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   
   const [debtForm, setDebtForm] = useState({
     name: '',
@@ -96,6 +93,13 @@ const DebtManager: React.FC = () => {
     description: ''
   });
 
+  const [budgetValidation, setBudgetValidation] = useState<{
+    isValid: boolean;
+    availableBudget: number;
+    exceedsBy?: number;
+    warning?: string;
+  } | null>(null);
+
   const debtTypes = {
     credit_card: { label: 'Tarjeta de Crédito', icon: <CreditCard />, color: '#FF6B6B' },
     bank_loan: { label: 'Crédito Bancario', icon: <AccountBalance />, color: '#4ECDC4' },
@@ -109,8 +113,25 @@ const DebtManager: React.FC = () => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Formatear número para input (sin símbolo de moneda)
+  const formatNumberInput = (value: string): string => {
+    // Remover todo excepto números
+    const numbers = value.replace(/[^0-9]/g, '');
+    if (!numbers) return '';
+    
+    // Formatear con separadores de miles
+    return new Intl.NumberFormat('es-CO').format(parseInt(numbers));
+  };
+
+  // Obtener valor numérico de input formateado
+  const parseFormattedInput = (value: string): number => {
+    const numbers = value.replace(/[^0-9]/g, '');
+    return numbers ? parseInt(numbers) : 0;
   };
 
   const calculatePayoffTime = (balance: number, minimumPayment: number, interestRate: number): number => {
@@ -121,6 +142,47 @@ const DebtManager: React.FC = () => {
     
     return Math.ceil(months);
   };
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    fetchDebts();
+    fetchDebtPayments();
+  }, []);
+
+  // Recalcular métricas cuando cambien las deudas
+  useEffect(() => {
+    if (debts.length > 0 && profile) {
+      calculateDebtMetrics();
+    }
+  }, [debts, profile]);
+
+  // Validar presupuesto en tiempo real cuando cambie el monto del pago
+  useEffect(() => {
+    const validateBudget = async () => {
+      if (!paymentForm.amount || !profile) {
+        setBudgetValidation(null);
+        return;
+      }
+
+      const paymentAmount = parseFormattedInput(paymentForm.amount);
+      const debtCategory = profile.categories.find(cat => cat.type === 'debt');
+      
+      if (!debtCategory || paymentAmount <= 0) {
+        setBudgetValidation(null);
+        return;
+      }
+
+      try {
+        const validation = await debtService.validatePaymentBudget(paymentAmount);
+        setBudgetValidation(validation);
+      } catch (error) {
+        console.error('Error validando presupuesto:', error);
+        setBudgetValidation(null);
+      }
+    };
+
+    validateBudget();
+  }, [paymentForm.amount, profile, expenses]);
 
   const getTotalDebt = (): number => {
     return debts.reduce((total, debt) => total + debt.currentBalance, 0);
@@ -135,74 +197,129 @@ const DebtManager: React.FC = () => {
     return (debt.currentBalance / debt.totalAmount) * 100;
   };
 
-  const handleAddDebt = () => {
-    const newDebt: Debt = {
-      id: Date.now().toString(),
-      name: debtForm.name,
-      type: debtForm.type,
-      totalAmount: parseFloat(debtForm.totalAmount),
-      currentBalance: parseFloat(debtForm.currentBalance),
-      interestRate: parseFloat(debtForm.interestRate),
-      minimumPayment: parseFloat(debtForm.minimumPayment),
-      dueDate: debtForm.dueDate,
-      paymentFrequency: debtForm.paymentFrequency,
-      creditor: debtForm.creditor,
-      description: debtForm.description,
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
+  const handleAddDebt = async () => {
+    try {
+      const newDebtData = {
+        name: debtForm.name,
+        type: debtForm.type,
+        totalAmount: parseFormattedInput(debtForm.totalAmount),
+        currentBalance: parseFormattedInput(debtForm.currentBalance),
+        interestRate: parseFloat(debtForm.interestRate),
+        minimumPayment: parseFormattedInput(debtForm.minimumPayment),
+        dueDate: debtForm.dueDate,
+        paymentFrequency: debtForm.paymentFrequency,
+        creditor: debtForm.creditor,
+        description: debtForm.description,
+        isActive: true
+      };
 
-    setDebts([...debts, newDebt]);
-    setDebtDialogOpen(false);
-    setDebtForm({
-      name: '',
-      type: 'credit_card',
-      totalAmount: '',
-      currentBalance: '',
-      interestRate: '',
-      minimumPayment: '',
-      dueDate: '',
-      paymentFrequency: 'monthly',
-      creditor: '',
-      description: ''
-    });
+      await addDebt(newDebtData);
+      setDebtDialogOpen(false);
+      setDebtForm({
+        name: '',
+        type: 'credit_card',
+        totalAmount: '',
+        currentBalance: '',
+        interestRate: '',
+        minimumPayment: '',
+        dueDate: '',
+        paymentFrequency: 'monthly',
+        creditor: '',
+        description: ''
+      });
+
+      setSnackbarMessage('Deuda agregada exitosamente. Se ha recalculado tu distribución de presupuesto.');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error agregando deuda:', error);
+      setSnackbarMessage('Error al agregar la deuda. Inténtalo de nuevo.');
+      setSnackbarOpen(true);
+    }
   };
 
-  const handleAddPayment = () => {
-    const newPayment: DebtPayment = {
-      id: Date.now().toString(),
-      debtId: paymentForm.debtId,
-      amount: parseFloat(paymentForm.amount),
-      paymentDate: new Date().toISOString(),
-      paymentType: paymentForm.paymentType,
-      description: paymentForm.description,
-      createdAt: new Date().toISOString()
-    };
-
-    // Actualizar el balance de la deuda
-    setDebts(debts.map(debt => {
-      if (debt.id === paymentForm.debtId) {
-        return {
-          ...debt,
-          currentBalance: Math.max(0, debt.currentBalance - parseFloat(paymentForm.amount))
-        };
+  const handleAddPayment = async () => {
+    try {
+      const paymentAmount = parseFormattedInput(paymentForm.amount);
+      const selectedDebt = debts.find(debt => debt.id === paymentForm.debtId);
+      
+      if (!selectedDebt) {
+        throw new Error('Deuda no encontrada');
       }
-      return debt;
-    }));
 
-    setPayments([...payments, newPayment]);
-    setPaymentDialogOpen(false);
-    setPaymentForm({
-      debtId: '',
-      amount: '',
-      paymentType: 'minimum',
-      description: ''
-    });
+      if (!profile) {
+        throw new Error('No hay perfil financiero disponible');
+      }
+
+      const debtCategory = profile.categories.find(cat => cat.type === 'debt');
+      if (!debtCategory) {
+        throw new Error('No se encontró la categoría de deudas en el presupuesto');
+      }
+
+      // Validar presupuesto disponible usando el nuevo servicio
+      const budgetValidation = await debtService.validatePaymentBudget(paymentAmount);
+
+      // Mostrar advertencia si excede el presupuesto
+      if (!budgetValidation.isValid && budgetValidation.warning) {
+        setSnackbarMessage(`Advertencia: ${budgetValidation.warning}`);
+        setSnackbarOpen(true);
+      }
+
+      // Crear datos del pago
+      const newPaymentData = {
+        amount: paymentAmount,
+        paymentDate: new Date().toISOString(),
+        paymentType: paymentForm.paymentType,
+        description: paymentForm.description
+      };
+
+      // Registrar el pago de deuda
+      await addDebtPayment(paymentForm.debtId, newPaymentData);
+
+      // Note: The backend now automatically handles debt balance updates and expense creation
+      // No need to manually update balance or create expenses
+
+      // Recalcular métricas de deudas
+      await recalculateOnDebtChange();
+
+      setPaymentDialogOpen(false);
+      setPaymentForm({
+        debtId: '',
+        amount: '',
+        paymentType: 'minimum',
+        description: ''
+      });
+
+      // Mostrar mensaje de éxito con información del impacto
+      const updatedBalance = Math.max(0, selectedDebt.currentBalance - paymentAmount);
+      let successMessage = '';
+      if (updatedBalance === 0) {
+        successMessage = `¡Felicitaciones! Has pagado completamente la deuda "${selectedDebt.name}". Tu presupuesto se ha actualizado automáticamente.`;
+      } else {
+        successMessage = `Pago registrado exitosamente.`;
+      }
+      
+      setSnackbarMessage(successMessage);
+      setSnackbarOpen(true);
+
+    } catch (error) {
+      console.error('Error registrando pago:', error);
+      setSnackbarMessage(`Error al registrar el pago: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      setSnackbarOpen(true);
+    }
   };
 
-  const handleDeleteDebt = (debtId: string) => {
-    setDebts(debts.filter(debt => debt.id !== debtId));
-    setPayments(payments.filter(payment => payment.debtId !== debtId));
+  const handleDeleteDebt = async (debtId: string) => {
+    try {
+      const debtToDelete = debts.find(debt => debt.id === debtId);
+      await deleteDebt(debtId);
+      
+      setSnackbarMessage(`Deuda "${debtToDelete?.name}" eliminada exitosamente. Se ha recalculado tu distribución de presupuesto.`);
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error eliminando deuda:', error);
+      setSnackbarMessage('Error al eliminar la deuda. Inténtalo de nuevo.');
+      setSnackbarOpen(true);
+    }
   };
 
   return (
@@ -220,6 +337,37 @@ const DebtManager: React.FC = () => {
         </Button>
       </Box>
 
+      {/* Alertas de integración con presupuesto */}
+      {debtMetrics && profile && (
+        <Box sx={{ mb: 3 }}>
+          {debtMetrics.riskLevel === 'high' || debtMetrics.riskLevel === 'critical' ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Alto Nivel de Endeudamiento</Typography>
+              Tus deudas requieren {debtMetrics.minimumPercentageRequired.toFixed(1)}% de tu ingreso mensual. 
+              {debtMetrics.riskLevel === 'critical' && ' Se recomienda reestructurar deudas urgentemente.'}
+            </Alert>
+          ) : debtMetrics.riskLevel === 'medium' ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Nivel Moderado de Deudas</Typography>
+              Mantén un control cuidadoso de tus pagos para evitar sobreendeudamiento.
+            </Alert>
+          ) : debtMetrics.riskLevel === 'low' && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Excelente Gestión de Deudas</Typography>
+              Tus deudas están bajo control. Considera aumentar ahorros o inversiones.
+            </Alert>
+          )}
+          
+          {budgetDistribution && budgetDistribution.debt < debtMetrics.minimumPercentageRequired && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">Presupuesto Insuficiente para Deudas</Typography>
+              Has asignado {budgetDistribution.debt}% pero necesitas al menos {debtMetrics.minimumPercentageRequired.toFixed(1)}% 
+              para cubrir pagos mínimos. Considera ajustar tu distribución de presupuesto.
+            </Alert>
+          )}
+        </Box>
+      )}
+
       {/* Resumen de deudas */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
@@ -232,6 +380,11 @@ const DebtManager: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Deuda Total
               </Typography>
+              {debtMetrics && (
+                <Typography variant="caption" color="text.secondary">
+                  Ratio D/I: {debtMetrics.debtToIncomeRatio.toFixed(1)}%
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -246,6 +399,11 @@ const DebtManager: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Pagos Mínimos Mensuales
               </Typography>
+              {debtMetrics && profile && (
+                <Typography variant="caption" color="text.secondary">
+                  {debtMetrics.minimumPercentageRequired.toFixed(1)}% del ingreso
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -260,6 +418,11 @@ const DebtManager: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Deudas Activas
               </Typography>
+              {budgetDistribution && (
+                <Typography variant="caption" color="text.secondary">
+                  Presupuesto: {budgetDistribution.debt}%
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -274,6 +437,16 @@ const DebtManager: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Deudas Críticas (+80%)
               </Typography>
+              {debtMetrics && (
+                <Chip 
+                  label={debtMetrics.riskLevel.toUpperCase()} 
+                  size="small" 
+                  color={
+                    debtMetrics.riskLevel === 'low' ? 'success' :
+                    debtMetrics.riskLevel === 'medium' ? 'warning' : 'error'
+                  }
+                />
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -396,7 +569,7 @@ const DebtManager: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Historial de Pagos
           </Typography>
-          {payments.length === 0 ? (
+          {debtPayments.length === 0 ? (
             <Alert severity="info">
               No hay pagos registrados aún.
             </Alert>
@@ -413,7 +586,7 @@ const DebtManager: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {payments.slice(-10).reverse().map((payment) => {
+                  {debtPayments.slice(-10).reverse().map((payment) => {
                     const debt = debts.find(d => d.id === payment.debtId);
                     return (
                       <TableRow key={payment.id}>
@@ -521,18 +694,26 @@ const DebtManager: React.FC = () => {
               <TextField
                 fullWidth
                 label="Monto Total/Límite"
-                type="number"
-                value={debtForm.totalAmount}
-                onChange={(e) => setDebtForm({ ...debtForm, totalAmount: e.target.value })}
+                value={debtForm.totalAmount ? formatNumberInput(debtForm.totalAmount) : ''}
+                onChange={(e) => {
+                  const numericValue = parseFormattedInput(e.target.value).toString();
+                  setDebtForm({ ...debtForm, totalAmount: numericValue });
+                }}
+                placeholder="Ej: 5.000.000"
+                helperText="Ingresa el límite total de la deuda"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Balance Actual"
-                type="number"
-                value={debtForm.currentBalance}
-                onChange={(e) => setDebtForm({ ...debtForm, currentBalance: e.target.value })}
+                value={debtForm.currentBalance ? formatNumberInput(debtForm.currentBalance) : ''}
+                onChange={(e) => {
+                  const numericValue = parseFormattedInput(e.target.value).toString();
+                  setDebtForm({ ...debtForm, currentBalance: numericValue });
+                }}
+                placeholder="Ej: 2.500.000"
+                helperText="Ingresa el saldo actual de la deuda"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -548,9 +729,13 @@ const DebtManager: React.FC = () => {
               <TextField
                 fullWidth
                 label="Pago Mínimo"
-                type="number"
-                value={debtForm.minimumPayment}
-                onChange={(e) => setDebtForm({ ...debtForm, minimumPayment: e.target.value })}
+                value={debtForm.minimumPayment ? formatNumberInput(debtForm.minimumPayment) : ''}
+                onChange={(e) => {
+                  const numericValue = parseFormattedInput(e.target.value).toString();
+                  setDebtForm({ ...debtForm, minimumPayment: numericValue });
+                }}
+                placeholder="Ej: 300.000"
+                helperText="Ingresa el pago mínimo mensual"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -619,11 +804,63 @@ const DebtManager: React.FC = () => {
           <TextField
             fullWidth
             label="Monto del Pago"
-            type="number"
-            value={paymentForm.amount}
-            onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+            value={paymentForm.amount ? formatNumberInput(paymentForm.amount) : ''}
+            onChange={(e) => {
+              const numericValue = parseFormattedInput(e.target.value).toString();
+              setPaymentForm({ ...paymentForm, amount: numericValue });
+            }}
             sx={{ mb: 2 }}
+            placeholder="Ej: 250.000"
+            helperText="Ingresa el monto del pago a realizar"
           />
+
+          {/* Mostrar impacto en presupuesto en tiempo real */}
+          {paymentForm.amount && profile && budgetValidation && (() => {
+            const paymentAmount = parseFormattedInput(paymentForm.amount);
+            const debtCategory = profile.categories.find(cat => cat.type === 'debt');
+            
+            if (!debtCategory || paymentAmount <= 0) return null;
+
+            const severity = !budgetValidation.isValid ? 'error' : 'info';
+
+            return (
+              <Box sx={{ mb: 2 }}>
+                <Alert 
+                  severity={severity}
+                  icon={!budgetValidation.isValid ? <Warning /> : <Info />}
+                >
+                  <AlertTitle>
+                    {!budgetValidation.isValid ? 'Presupuesto Excedido' : 'Validación de Presupuesto'}
+                  </AlertTitle>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Disponible:</strong> {formatCurrency(budgetValidation.availableBudget)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Pago:</strong> {formatCurrency(paymentAmount)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+
+                  {budgetValidation.exceedsBy && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'error.main', fontWeight: 'bold' }}>
+                      Exceso: {formatCurrency(budgetValidation.exceedsBy)}
+                    </Typography>
+                  )}
+
+                  {budgetValidation.warning && (
+                    <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                      {budgetValidation.warning}
+                    </Typography>
+                  )}
+                </Alert>
+              </Box>
+            );
+          })()}
           
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Tipo de Pago</InputLabel>
@@ -654,6 +891,14 @@ const DebtManager: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-// Tipos principales del sistema
+// Tipos compartidos entre frontend y backend
 
 export interface TimeSession {
   id: string;
@@ -29,16 +29,16 @@ export interface Task {
 
 export interface Subtask {
   id: string;
-  name: string;
+  name: string; // Formato de lectura, ej: "Kindle"
+  title?: string; // Título del libro
   completed: boolean;
   order: number;
   movedToEnd: boolean;
   timeTracking: TimeTracking;
-  subtasks?: Subtask[]; // Permitir subtareas anidadas
-  title?: string; // Para títulos de libros/juegos
-  subtaskRotation?: 'weekly' | 'completion' | 'dailyOrCompletion' | 'onStartOrCompletion';
-  randomizeNext?: boolean;
+  subtasks?: Subtask[];
   currentSubtaskId?: string;
+  parentName?: string;
+  subtaskRotation?: 'weekly' | 'completion' | 'onStartOrCompletion' | 'dailyOrCompletion'; // Define cómo rotan las subtareas
 }
 
 export interface WeeklyTask {
@@ -50,20 +50,10 @@ export interface WeeklyTask {
   subtasks?: Subtask[];
   order: number;
   timeTracking: TimeTracking;
-  isStarted?: boolean;
-  subtaskRotation?: 'weekly' | 'completion' | 'onStartOrCompletion';
-  currentSubtaskId?: string;
+  isStarted?: boolean; // Nueva propiedad para controlar si la tarea ha sido iniciada
+  subtaskRotation?: 'weekly' | 'completion' | 'onStartOrCompletion' | 'dailyOrCompletion'; // Define cómo rotan las subtareas
+  currentSubtaskId?: string; // ID de la subtarea activa
   notes?: string; // Notas de la tarea
-}
-
-// New interface for completed items history
-export interface CompletedItem {
-  id: string;
-  type: 'Game' | 'Book' | 'Course' | 'Payment';
-  name: string;
-  completedDate: string; // ISO string
-  timeSpent?: number; // in milliseconds
-  parentId?: string; // Optional: ID of the parent task/subtask
 }
 
 export type TimerState = 'running' | 'paused' | 'stopped';
@@ -76,7 +66,6 @@ export interface DayState {
   subtaskQueues: { [taskId: string]: Subtask[] };
   timerElapsedSeconds?: number;
   timerState?: TimerState;
-  history?: CompletedItem[]; // Add this
 }
 
 // Espacios disponibles para tareas y compras
@@ -110,7 +99,7 @@ export type SpaceType =
   | 'gimnasio'
   | 'alacena_alterna'
   | 'cuarto_limpios'
-  | 'frutero';
+  | 'frutero'
 
 export interface Space {
   id: SpaceType;
@@ -197,43 +186,6 @@ export interface BudgetDistribution {
   debt: number;
 }
 
-export interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-  warnings?: string[];
-}
-
-export interface DebtBudgetError extends Error {
-  code: string;
-  details?: any;
-}
-
-export const ERROR_CODES = {
-  INVALID_DISTRIBUTION: 'INVALID_DISTRIBUTION',
-  INSUFFICIENT_DEBT_BUDGET: 'INSUFFICIENT_DEBT_BUDGET',
-  DEBT_CALCULATION_FAILED: 'DEBT_CALCULATION_FAILED',
-  INTEGRATION_ERROR: 'INTEGRATION_ERROR'
-} as const;
-
-export const DEFAULT_DEBT_SETTINGS: DebtBudgetSettings = {
-  includeDebtCategory: true,
-  minimumDebtPercentage: 0,
-  currentDebtPercentage: 10,
-  autoCalculateFromDebts: true,
-  alertThresholds: {
-    highDebt: 30,
-    criticalDebt: 40
-  }
-};
-
-export const DEBT_CATEGORY_CONFIG: Partial<BudgetCategory> = {
-  name: 'Deudas',
-  type: 'debt',
-  color: '#FF6B6B',
-  description: 'Pagos de deudas y obligaciones financieras',
-  isDebtCategory: true
-};
-
 export interface Expense {
   id: string;
   categoryId: string;
@@ -256,6 +208,15 @@ export interface FinancialSummary {
     remaining: number;
     percentage: number;
   }[];
+}
+
+export interface CompletedItem {
+  id: string;
+  type: 'Game' | 'Book' | 'Course';
+  name: string;
+  completedDate: string; // ISO string
+  timeSpent?: number; // in milliseconds
+  parentId?: string; // Optional: ID of the parent task/subtask
 }
 
 export interface Debt {
@@ -299,15 +260,6 @@ export interface DebtSummary {
   }[];
 }
 
-// Tipos para estadísticas
-export interface TaskStats {
-  totalTasks: number;
-  completedTasks: number;
-  averageTime: number;
-  totalTime: number;
-  categoryBreakdown: { [category: string]: number };
-}
-
 export interface TimeStats {
   taskId: string;
   taskName: string;
@@ -317,3 +269,38 @@ export interface TimeStats {
   minTime: number;
   maxTime: number;
 }
+
+export interface ValidationResult {
+  isValid: boolean;
+  error?: string;
+  warnings?: string[];
+}
+
+export class DebtBudgetError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'DebtBudgetError';
+  }
+}
+
+export const ERROR_CODES = {
+  INVALID_DISTRIBUTION: 'INVALID_DISTRIBUTION',
+  INSUFFICIENT_DEBT_BUDGET: 'INSUFFICIENT_DEBT_BUDGET',
+  DEBT_CALCULATION_FAILED: 'DEBT_CALCULATION_FAILED',
+  INTEGRATION_ERROR: 'INTEGRATION_ERROR'
+} as const;
+
+export const DEFAULT_DEBT_SETTINGS: DebtBudgetSettings = {
+  includeDebtCategory: true,
+  minimumDebtPercentage: 0,
+  currentDebtPercentage: 10,
+  autoCalculateFromDebts: true,
+  alertThresholds: {
+    highDebt: 30,
+    criticalDebt: 40
+  }
+};

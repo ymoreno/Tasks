@@ -41,12 +41,39 @@ const PaymentsPage: React.FC = () => {
     url: '',
     description: '',
     category: '',
+    amount: '',
     space: undefined as SpaceType | undefined,
     priority: 5,
     isRecurring: false,
     recurrence: 'mensual' as 'mensual' | 'trimestral' | 'semestral' | 'anual',
     dueDate: '',
   });
+
+  // Funciones de formateo de moneda
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Formatear número para input (sin símbolo de moneda)
+  const formatNumberInput = (value: string): string => {
+    // Remover todo excepto números
+    const numbers = value.replace(/[^0-9]/g, '');
+    if (!numbers) return '';
+    
+    // Formatear con separadores de miles
+    return new Intl.NumberFormat('es-CO').format(parseInt(numbers));
+  };
+
+  // Obtener valor numérico de input formateado
+  const parseFormattedInput = (value: string): number => {
+    const numbers = value.replace(/[^0-9]/g, '');
+    return numbers ? parseInt(numbers) : 0;
+  };
 
   // Cargar pagos al montar el componente
   useEffect(() => {
@@ -70,6 +97,8 @@ const PaymentsPage: React.FC = () => {
         paymentsWithUrl: 0,
         paymentsWithoutUrl: 0,
         categories: [],
+        totalAmount: 0,
+        averageAmount: 0,
       };
     }
 
@@ -77,6 +106,8 @@ const PaymentsPage: React.FC = () => {
     const paymentsWithUrl = paymentsArray.filter(p => p.url).length;
     const paymentsWithoutUrl = totalPayments - paymentsWithUrl;
     const categories = [...new Set(paymentsArray.map(p => p.category).filter(Boolean))];
+    const totalAmount = paymentsArray.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const averageAmount = totalPayments > 0 ? totalAmount / totalPayments : 0;
     
     const sortedPayments = [...paymentsArray].sort((a, b) => {
       if (a.priority !== b.priority) {
@@ -94,7 +125,15 @@ const PaymentsPage: React.FC = () => {
       return 0;
     });
 
-    return { highestPriorityPayment: sortedPayments[0], totalPayments, paymentsWithUrl, paymentsWithoutUrl, categories };
+    return { 
+      highestPriorityPayment: sortedPayments[0], 
+      totalPayments, 
+      paymentsWithUrl, 
+      paymentsWithoutUrl, 
+      categories,
+      totalAmount,
+      averageAmount
+    };
   }, [payments]);
 
 
@@ -107,6 +146,7 @@ const PaymentsPage: React.FC = () => {
         url: payment.url || '',
         description: payment.description || '',
         category: payment.category || '',
+        amount: payment.amount ? payment.amount.toString() : '',
         space: payment.space,
         priority: payment.priority || 5,
         isRecurring: payment.isRecurring || false,
@@ -120,6 +160,7 @@ const PaymentsPage: React.FC = () => {
         url: '',
         description: '',
         category: '',
+        amount: '',
         space: undefined,
         priority: 5,
         isRecurring: false,
@@ -138,6 +179,7 @@ const PaymentsPage: React.FC = () => {
       url: '',
       description: '',
       category: '',
+      amount: '',
       space: undefined,
       priority: 5,
       isRecurring: false,
@@ -155,6 +197,7 @@ const PaymentsPage: React.FC = () => {
         url: formData.url.trim() || undefined,
         description: formData.description.trim() || undefined,
         category: formData.category.trim() || undefined,
+        amount: parseFormattedInput(formData.amount),
         space: formData.space,
         priority: formData.priority,
         isRecurring: formData.isRecurring,
@@ -252,6 +295,9 @@ const PaymentsPage: React.FC = () => {
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
                         {payment.name}
+                      </Typography>
+                      <Typography variant="h5" color="primary" sx={{ mb: 1, fontWeight: 600 }}>
+                        {formatCurrency(payment.amount)}
                       </Typography>
                       {payment.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -355,6 +401,12 @@ const PaymentsPage: React.FC = () => {
               📊 Total de items: <strong>{stats.totalPayments}</strong>
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
+              💰 Monto total: <strong>{formatCurrency(stats.totalAmount)}</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              📈 Promedio: <strong>{formatCurrency(stats.averageAmount)}</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
               🔗 Con URL: <strong>{stats.paymentsWithUrl}</strong>
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
@@ -429,6 +481,24 @@ const PaymentsPage: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             sx={{ mb: 2 }}
           />
+          <TextField
+            margin="dense"
+            label="Monto *"
+            fullWidth
+            variant="outlined"
+            value={formData.amount ? formatNumberInput(formData.amount) : ''}
+            onChange={(e) => {
+              const numericValue = parseFormattedInput(e.target.value).toString();
+              setFormData({ ...formData, amount: numericValue });
+            }}
+            required
+            placeholder="Ej: 150.000"
+            InputProps={{
+              startAdornment: <InputAdornment position="start">$</InputAdornment>
+            }}
+            helperText="Ingresa el monto del pago o compra"
+            sx={{ mb: 2 }}
+          />
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Prioridad</InputLabel>
             <Select
@@ -495,7 +565,7 @@ const PaymentsPage: React.FC = () => {
           <Button 
             onClick={handleSave} 
             variant="contained"
-            disabled={!formData.name.trim()}
+            disabled={!formData.name.trim() || !formData.amount.trim()}
           >
             {editingPayment ? 'Actualizar' : 'Crear'}
           </Button>

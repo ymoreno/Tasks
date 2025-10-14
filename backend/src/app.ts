@@ -14,6 +14,7 @@ import { paymentRoutes } from './routes/paymentRoutes';
 import { timeRoutes } from './routes/timeRoutes';
 import { fileRoutes } from './routes/fileRoutes';
 import { financeRoutes } from './routes/financeRoutes';
+import debtRoutes from './routes/debtRoutes';
 import historyRoutes from './routes/historyRoutes';
 
 // Importar middleware
@@ -65,6 +66,7 @@ app.use(`${config.api.prefix}/payments`, paymentRoutes);
 app.use(`${config.api.prefix}/time`, timeRoutes);
 app.use(`${config.api.prefix}/files`, fileRoutes);
 app.use(`${config.api.prefix}/finance`, financeRoutes);
+app.use(`${config.api.prefix}/debts`, debtRoutes);
 app.use(`${config.api.prefix}/history`, historyRoutes);
 
 // Ruta de salud del servidor
@@ -88,8 +90,21 @@ app.use(notFound);
 app.use(requestErrorLogger);
 app.use(errorHandler);
 
+// Inicialización del estado diario al arrancar el servidor
+const initializeDailyState = async () => {
+  try {
+    const { WeeklyTaskService } = await import('./services/dataService');
+    await WeeklyTaskService.getCurrentDayState(); // Esto ejecutará el auto-reset si es necesario
+    console.log('✅ Estado diario inicializado correctamente');
+  } catch (error) {
+    console.error('❌ Error inicializando estado diario:', error);
+  }
+};
+
 // Iniciar servidor en todas las interfaces de red
-app.listen(config.server.port, '0.0.0.0', () => {
+app.listen(config.server.port, '0.0.0.0', async () => {
+  // Inicializar estado diario
+  await initializeDailyState();
   logger.success('🚀 Administrador de Tareas - Backend iniciado');
   logger.info('=====================================');
   logger.info(`📡 Servidor local: http://localhost:${config.server.port}`);

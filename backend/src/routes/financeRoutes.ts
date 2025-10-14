@@ -1,7 +1,8 @@
 import express from 'express';
 import { FinanceService } from '../services/dataService';
+import { DebtService } from '../services/debtService';
 import { createError } from '../middleware/errorHandler';
-import { ApiResponse, FinancialProfile, Expense, FinancialSummary } from '../types';
+import { ApiResponse, FinancialProfile, Expense, FinancialSummary, BudgetDistribution, DebtBudgetSettings, DebtMetrics } from '../types';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.post('/profile', async (req, res, next) => {
       throw createError('El ingreso mensual debe ser mayor a 0', 400);
     }
 
-    if (!['recommended', 'custom'].includes(distributionType)) {
+    if (!['recommended', 'custom', 'debt-aware'].includes(distributionType)) {
       throw createError('Tipo de distribución inválido', 400);
     }
 
@@ -172,6 +173,173 @@ router.get('/summary', async (req, res, next) => {
       success: true,
       data: summary,
       message: 'Resumen financiero calculado exitosamente'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// --- New Debt-Aware Budget Endpoints ---
+
+// PUT /api/finance/budget-distribution - Update budget distribution
+router.put('/budget-distribution', async (req, res, next) => {
+  try {
+    const { distribution } = req.body;
+
+    if (!distribution) {
+      throw createError('Budget distribution is required', 400);
+    }
+
+    // Validate distribution structure
+    const requiredKeys = ['necessity', 'want', 'saving', 'debt'];
+    for (const key of requiredKeys) {
+      if (typeof distribution[key] !== 'number') {
+        throw createError(`Distribution must include valid ${key} percentage`, 400);
+      }
+    }
+
+    // Validate that percentages sum to 100
+    const total = Object.values(distribution).reduce((sum: number, val: any) => sum + val, 0);
+    if (Math.abs(total - 100) > 0.01) {
+      throw createError(`Distribution percentages must sum to 100%. Current total: ${total}%`, 400);
+    }
+
+    const updatedProfile = await FinanceService.updateBudgetDistribution(distribution);
+    
+    const response: ApiResponse<FinancialProfile> = {
+      success: true,
+      data: updatedProfile,
+      message: 'Budget distribution updated successfully'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/finance/debt-settings - Update debt settings
+router.put('/debt-settings', async (req, res, next) => {
+  try {
+    const { debtSettings } = req.body;
+
+    if (!debtSettings) {
+      throw createError('Debt settings are required', 400);
+    }
+
+    const updatedProfile = await FinanceService.updateDebtSettings(debtSettings);
+    
+    const response: ApiResponse<FinancialProfile> = {
+      success: true,
+      data: updatedProfile,
+      message: 'Debt settings updated successfully'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/finance/ensure-debt-category - Ensure debt category exists
+router.post('/ensure-debt-category', async (req, res, next) => {
+  try {
+    const updatedProfile = await FinanceService.ensureDebtCategory();
+    
+    const response: ApiResponse<FinancialProfile> = {
+      success: true,
+      data: updatedProfile,
+      message: 'Debt category ensured successfully'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/finance/recalculate-with-debts - Recalculate budget with debt metrics
+router.post('/recalculate-with-debts', async (req, res, next) => {
+  try {
+    const profile = await FinanceService.getProfile();
+    if (!profile) {
+      throw createError('No financial profile found', 404);
+    }
+
+    // Calculate current debt metrics
+    const debtMetrics = await DebtService.calculateDebtMetrics(profile.monthlyIncome);
+    
+    // Recalculate profile with debt metrics
+    const updatedProfile = await FinanceService.recalculateWithDebtMetrics(debtMetrics);
+    
+    const response: ApiResponse<{ profile: FinancialProfile; metrics: DebtMetrics }> = {
+      success: true,
+      data: { profile: updatedProfile, metrics: debtMetrics },
+      message: 'Budget recalculated with debt metrics successfully'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/finance/debt-metrics - Get current debt metrics
+router.get('/debt-metrics', async (req, res, next) => {
+  try {
+    const profile = await FinanceService.getProfile();
+    if (!profile) {
+      throw createError('No financial profile found', 404);
+    }
+
+    const debtMetrics = await DebtService.calculateDebtMetrics(profile.monthlyIncome);
+    
+    const response: ApiResponse<DebtMetrics> = {
+      success: true,
+      data: debtMetrics,
+      message: 'Debt metrics calculated successfully'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// --- Data Migration and Validation Endpoints ---
+
+// POST /api/finance/migrate-profile - Migrate existing profile to support debt features
+router.post('/migrate-profile', async (req, res, next) => {
+  try {
+    const migratedProfile = await FinanceService.migrateExistingProfile();
+    
+    if (!migratedProfile) {
+      throw createError('No profile found to migrate', 404);
+    }
+    
+    const response: ApiResponse<FinancialProfile> = {
+      success: true,
+      data: migratedProfile,
+      message: 'Profile migrated successfully to support debt features'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/finance/validate-profile - Validate profile integrity
+router.get('/validate-profile', async (req, res, next) => {
+  try {
+    const validation = await FinanceService.validateProfileIntegrity();
+    
+    const response: ApiResponse<any> = {
+      success: true,
+      data: validation,
+      message: 'Profile validation completed'
     };
     
     res.json(response);

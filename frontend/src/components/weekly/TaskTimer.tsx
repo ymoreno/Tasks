@@ -35,46 +35,129 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
   onComplete
 }) => {
   const [showAlarm, setShowAlarm] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
+  const [lastTickTime, setLastTickTime] = useState<number>(Date.now());
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const TARGET_MINUTES = 45;
   const TARGET_SECONDS = TARGET_MINUTES * 60;
 
-  // Crear audio para la alarma (solo una vez)
+  // Solicitar permisos de notificación al montar el componente
   useEffect(() => {
-    const createAlarmSound = () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
-      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    };
-    audioRef.current = { play: createAlarmSound } as any;
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
+
+  // Inicializar audio context cuando el usuario interactúe
+  const initializeAudio = async () => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      setAudioEnabled(true);
+    } catch (error) {
+      console.warn('Error inicializando audio:', error);
+    }
+  };
+
+  // Función para crear y reproducir un sonido de alarma
+  const createAlarmSound = async () => {
+    try {
+      if (!audioContextRef.current || audioContextRef.current.state !== 'running') {
+        await initializeAudio();
+      }
+
+      if (!audioContextRef.current) return;
+
+      const oscillator = audioContextRef.current.createOscillator();
+      const gainNode = audioContextRef.current.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContextRef.current.destination);
+
+      // Configurar el sonido (tono más agudo y distintivo)
+      oscillator.frequency.setValueAtTime(1200, audioContextRef.current.currentTime);
+      oscillator.type = 'square'; // Sonido más distintivo
+
+      // Configurar el volumen con fade in/out
+      gainNode.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.5, audioContextRef.current.currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 0.3);
+
+      oscillator.start(audioContextRef.current.currentTime);
+      oscillator.stop(audioContextRef.current.currentTime + 0.3);
+
+      return new Promise<void>((resolve) => {
+        oscillator.onended = () => resolve();
+      });
+    } catch (error) {
+      console.warn('Error creando sonido de alarma:', error);
+      // Fallback: vibración si está disponible
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+      }
+    }
+  };
 
   // Timer principal controlado por el estado del contexto
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (timerState === 'running') {
       interval = setInterval(() => {
-        const newSeconds = elapsedSeconds + 1;
-        onTick(newSeconds); // Informar al contexto del nuevo segundo
+        const now = Date.now();
+        const timeSinceLastTick = now - lastTickTime;
 
-        // Alarma a los 45 minutos
-        if (newSeconds >= TARGET_SECONDS) {
+        // Detectar si el sistema estuvo pausado (más de 2 segundos desde el último tick)
+        if (timeSinceLastTick > 2000) {
+          // Calcular el tiempo real que debería haber transcurrido
+          if (startTime) {
+            const startDate = new Date(`1970-01-01T${startTime}`);
+            const currentTimeStr = new Date().toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            });
+            const currentDate = new Date(`1970-01-01T${currentTimeStr}`);
+            const realElapsedMs = currentDate.getTime() - startDate.getTime();
+            const realElapsedSeconds = Math.floor(realElapsedMs / 1000);
+
+            // Corregir el timer al tiempo real
+            if (realElapsedSeconds > elapsedSeconds) {
+              onTick(realElapsedSeconds);
+              setLastTickTime(now);
+
+              // Verificar alarma después de la corrección
+              if (realElapsedSeconds >= TARGET_SECONDS && elapsedSeconds < TARGET_SECONDS) {
+                setShowAlarm(true);
+                playAlarm();
+                onPause();
+              }
+
+              return; // Salir para evitar el tick normal
+            }
+          }
+        }
+
+        // Tick normal
+        const newSeconds = elapsedSeconds + 1;
+        onTick(newSeconds);
+        setLastTickTime(now);
+
+        // Alarma a los 45 minutos (activar cuando se alcanza o supera por primera vez)
+        if (newSeconds >= TARGET_SECONDS && elapsedSeconds < TARGET_SECONDS) {
           setShowAlarm(true);
           playAlarm();
-          onComplete(); // Completar la tarea automáticamente
+          // Pausar automáticamente el timer
+          onPause();
         }
       }, 1000);
     }
@@ -84,20 +167,83 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
         clearInterval(interval);
       }
     };
-  }, [timerState, elapsedSeconds, onTick, onComplete]);
+  }, [timerState, elapsedSeconds, onTick, onComplete, lastTickTime, startTime]);
 
-  const playAlarm = () => {
+  // Capturar tiempo de inicio y fin
+  useEffect(() => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    if (timerState === 'running' && !startTime) {
+      // Capturar tiempo de inicio cuando el timer comience a correr
+      setStartTime(timeString);
+      setEndTime(null); // Limpiar tiempo de fin anterior
+      setLastTickTime(Date.now()); // Inicializar el tiempo del último tick
+    } else if ((timerState === 'stopped' || timerState === 'paused') && elapsedSeconds >= TARGET_SECONDS && !endTime) {
+      // Capturar tiempo de fin cuando se complete, pause o detenga después de 45 minutos
+      setEndTime(timeString);
+    } else if (timerState === 'stopped' && elapsedSeconds === 0) {
+      // Reset cuando se detiene completamente el timer
+      setStartTime(null);
+      setEndTime(null);
+    }
+  }, [timerState, elapsedSeconds, startTime, endTime]);
+
+  // Verificación independiente de alarma (backup)
+  useEffect(() => {
+    if (timerState === 'running' && elapsedSeconds >= TARGET_SECONDS && !showAlarm) {
+      setShowAlarm(true);
+      playAlarm();
+      onPause();
+    }
+  }, [elapsedSeconds, timerState, showAlarm]);
+
+  const playAlarm = async () => {
+
     try {
-      if (audioRef.current) {
-        for (let i = 0; i < 3; i++) {
-          setTimeout(() => {
-            audioRef.current?.play();
-          }, i * 600);
+      // Reproducir 3 beeps con pausa entre ellos
+      for (let i = 0; i < 3; i++) {
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 400));
         }
+        await createAlarmSound();
       }
     } catch (error) {
-      console.warn('No se pudo reproducir la alarma:', error);
+      console.warn('No se pudo reproducir la alarma de audio:', error);
     }
+
+    // Intentar notificación del navegador como respaldo
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('¡Tiempo completado!', {
+          body: `Has completado 45 minutos en: ${taskName}`,
+          icon: '/favicon.ico',
+          tag: 'task-timer',
+          requireInteraction: false
+        });
+      }
+    } catch (notificationError) {
+      console.warn('No se pudo mostrar notificación:', notificationError);
+    }
+
+    // Vibración como respaldo adicional
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate([300, 200, 300, 200, 300]);
+      }
+    } catch (vibrationError) {
+      console.warn('No se pudo activar vibración:', vibrationError);
+    }
+
+    // Cerrar automáticamente el diálogo después de 10 segundos
+    setTimeout(() => {
+      setShowAlarm(false);
+    }, 10000);
   };
 
   const formatTime = (totalSeconds: number): string => {
@@ -139,9 +285,117 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
           <Typography variant="h3" component="div" color={getTimerColor()}>
             {formatTime(elapsedSeconds)}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Objetivo: {TARGET_MINUTES} minutos | Restante: {getRemainingTime()}
+          <Typography variant="body2" color={elapsedSeconds >= TARGET_SECONDS ? 'error.main' : 'text.secondary'}>
+            Objetivo: {TARGET_MINUTES} minutos | {elapsedSeconds >= TARGET_SECONDS ? 'TIEMPO EXCEDIDO' : `Restante: ${getRemainingTime()}`}
           </Typography>
+
+          {/* Timestamps de tiempo real */}
+          <Box sx={{ mt: 2, p: 2, backgroundColor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'info.dark' }}>
+              ⏰ Verificación de Tiempo Real
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                  Hora de Inicio
+                </Typography>
+                <Typography variant="h6" sx={{ color: startTime ? 'success.main' : 'text.disabled' }}>
+                  {startTime || '--:--:--'}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                  Hora de Fin (45min)
+                </Typography>
+                <Typography variant="h6" sx={{ color: endTime ? 'error.main' : 'text.disabled' }}>
+                  {endTime || '--:--:--'}
+                </Typography>
+              </Box>
+              {startTime && (
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                    {endTime ? 'Duración Real' : 'Tiempo Real Transcurrido'}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: endTime ? 'warning.main' : 'info.main' }}>
+                    {(() => {
+                      const startDate = new Date(`1970-01-01T${startTime}`);
+                      const currentTime = endTime || new Date().toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                      });
+                      const endDate = new Date(`1970-01-01T${currentTime}`);
+                      const realDurationMs = endDate.getTime() - startDate.getTime();
+                      const realDurationMin = Math.floor(realDurationMs / 60000);
+                      const realDurationSec = Math.floor((realDurationMs % 60000) / 1000);
+                      return `${realDurationMin}:${realDurationSec.toString().padStart(2, '0')}`;
+                    })()}
+                  </Typography>
+                </Box>
+              )}
+              {startTime && timerState === 'running' && (
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
+                    Desfase Detectado
+                  </Typography>
+                  <Typography variant="h6" sx={{
+                    color: (() => {
+                      const timerMin = Math.floor(elapsedSeconds / 60);
+                      const startDate = new Date(`1970-01-01T${startTime}`);
+                      const now = new Date();
+                      const currentTime = now.toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                      });
+                      const endDate = new Date(`1970-01-01T${currentTime}`);
+                      const realDurationMs = endDate.getTime() - startDate.getTime();
+                      const realMin = Math.floor(realDurationMs / 60000);
+                      const diff = Math.abs(timerMin - realMin);
+                      return diff <= 1 ? 'success.main' : diff <= 3 ? 'warning.main' : 'error.main';
+                    })()
+                  }}>
+                    {(() => {
+                      const timerMin = Math.floor(elapsedSeconds / 60);
+                      const startDate = new Date(`1970-01-01T${startTime}`);
+                      const now = new Date();
+                      const currentTime = now.toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                      });
+                      const endDate = new Date(`1970-01-01T${currentTime}`);
+                      const realDurationMs = endDate.getTime() - startDate.getTime();
+                      const realMin = Math.floor(realDurationMs / 60000);
+                      const diff = timerMin - realMin;
+                      return diff === 0 ? '✅ Sincronizado' : `${diff > 0 ? '+' : ''}${diff}min`;
+                    })()}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', alignSelf: 'center' }}>
+                Compara con tu reloj real
+              </Typography>
+              {startTime && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => {
+                    setStartTime(null);
+                    setEndTime(null);
+                  }}
+                >
+                  Reset Tiempos
+                </Button>
+              )}
+            </Box>
+          </Box>
         </Box>
 
         <Box sx={{ mb: 2 }}>
@@ -153,9 +407,14 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
           />
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
           {elapsedSeconds >= TARGET_SECONDS && (
-            <Chip icon={<Alarm />} label="¡45 minutos completados!" color="warning" variant="filled" />
+            <Chip
+              icon={<Alarm />}
+              label={elapsedSeconds > TARGET_SECONDS ? `¡TIEMPO EXCEDIDO! (+${Math.floor((elapsedSeconds - TARGET_SECONDS) / 60)}min)` : "¡45 minutos completados!"}
+              color="error"
+              variant="filled"
+            />
           )}
           {timerState === 'running' && (
             <Chip label="En ejecución" color="success" variant="filled" />
@@ -163,12 +422,31 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
           {timerState === 'paused' && (
             <Chip label="Pausado" color="warning" variant="outlined" />
           )}
-           {timerState === 'stopped' && (
+          {timerState === 'stopped' && (
             <Chip label="Detenido" color="default" variant="outlined" />
+          )}
+          {audioEnabled && (timerState === 'running' || timerState === 'paused') && (
+            <Chip icon={<Alarm />} label="Alarma activa" color="info" variant="outlined" size="small" />
+          )}
+          {startTime && timerState === 'running' && (
+            <Chip
+              label="🔄 Auto-corrección activa"
+              color="secondary"
+              variant="outlined"
+              size="small"
+            />
+          )}
+          {timerState === 'running' && elapsedSeconds < TARGET_SECONDS && (
+            <Chip
+              label={`🔔 Alarma en ${Math.ceil((TARGET_SECONDS - elapsedSeconds) / 60)}min`}
+              color="info"
+              variant="outlined"
+              size="small"
+            />
           )}
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
           {timerState === 'running' && (
             <Button variant="outlined" startIcon={<Pause />} onClick={onPause}>
               Pausar
@@ -184,8 +462,20 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
               Completar Tarea
             </Button>
           )}
-           {timerState === 'stopped' && (
-             <Typography variant="body2" color="text.secondary">
+          {!audioEnabled && (timerState === 'running' || timerState === 'paused') && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Alarm />}
+              onClick={initializeAudio}
+              color="warning"
+            >
+              Habilitar Alarma
+            </Button>
+          )}
+
+          {timerState === 'stopped' && (
+            <Typography variant="body2" color="text.secondary">
               La tarea ha finalizado.
             </Typography>
           )}
@@ -202,7 +492,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
             Has completado {TARGET_MINUTES} minutos en la tarea: <strong>{taskName}</strong>
           </Alert>
           <Typography variant="body1" sx={{ textAlign: 'center' }}>
-            Puedes completar la tarea ahora o continuar más tarde.
+            Has alcanzado el tiempo objetivo de 45 minutos. Puedes completar la tarea ahora o continuar trabajando en ella.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', gap: 1 }}>
