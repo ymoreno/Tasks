@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tasks-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persistir datos
+      - ./backend/data:/app/data
+      # Para desarrollo (opcional)
+      - ./backend/src:/app/src
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+    networks:
+      - tasks-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tasks-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - tasks-network
+
+networks:
+  tasks-network:
+    driver: bridge
+
+volumes:
+  tasks-data:
+    driver: local

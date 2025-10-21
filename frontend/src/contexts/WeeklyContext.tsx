@@ -12,7 +12,7 @@ const initialState = {
 }
 
 // Reducer para manejar el estado
-type WeeklyAction = 
+type WeeklyAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_WEEKLY_TASKS'; payload: WeeklyTask[] }
@@ -108,21 +108,21 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  const pauseTimer = async () => {
+  const pauseTimer = useCallback(async () => {
     if (state.dayState?.timerElapsedSeconds !== undefined) {
       await updateTimer(state.dayState.timerElapsedSeconds, 'paused');
     }
-  };
+  }, [state.dayState?.timerElapsedSeconds]);
 
-  const resumeTimer = async () => {
+  const resumeTimer = useCallback(async () => {
     if (state.dayState?.timerElapsedSeconds !== undefined) {
       await updateTimer(state.dayState.timerElapsedSeconds, 'running');
     }
-  };
+  }, [state.dayState?.timerElapsedSeconds]);
 
   const tickTimer = useCallback((newSeconds: number) => {
     dispatch({ type: 'SET_TIMER_LOCALLY', payload: { elapsedSeconds: newSeconds } });
-    
+
     // Persistir cada 10 segundos para no sobrecargar el servidor
     if (newSeconds % 10 === 0) {
       updateTimer(newSeconds, 'running').catch(error => {
@@ -147,9 +147,9 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (state.dayState?.timerState === 'running') {
         await pauseTimer();
       }
-      
+
       const result = await weeklyService.completeTask()
-      
+
       // Tarea aleatoria seleccionada (sin popup molesto)
       if (result.selectedTask) {
         console.log(`Tarea aleatoria seleccionada: ${result.selectedTask.name}`);
@@ -157,7 +157,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       dispatch({ type: 'SET_DAY_STATE', payload: result.dayState })
       dispatch({ type: 'SET_CURRENT_TASK', payload: result.nextTask })
-      
+
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error completando tarea' })
     }
@@ -169,7 +169,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (state.dayState?.timerState === 'running') {
         await pauseTimer();
       }
-      
+
       const result = await weeklyService.completeSubtask();
       dispatch({ type: 'SET_DAY_STATE', payload: result.dayState });
       dispatch({ type: 'SET_CURRENT_TASK', payload: result.currentTask });
@@ -184,7 +184,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (state.dayState?.timerState === 'running') {
         await pauseTimer();
       }
-      
+
       await weeklyService.updateSubtaskTitle(subtaskId, newTitle);
       // Recargar los datos para reflejar el cambio de título y el historial
       await fetchWeeklyTasks();
@@ -200,7 +200,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (state.dayState?.timerState === 'running') {
         await pauseTimer();
       }
-      
+
       await weeklyService.finishGameTask(subtaskId, newTitle);
       // Recargar los datos para reflejar el cambio de título y la rotación
       await fetchWeeklyTasks();
@@ -214,7 +214,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const result = await weeklyService.addCourseToSubtask(parentSubtaskId, courseName);
       await fetchWeeklyTasks();
-      
+
       // Mostrar notificación de éxito en consola
       console.log(`✅ ${result.message}: "${result.courseName}"`);
     } catch (error) {
@@ -229,7 +229,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (state.dayState?.timerState === 'running') {
         await pauseTimer();
       }
-      
+
       await weeklyService.completeCourse(parentSubtaskId, courseSubtaskId);
       await fetchWeeklyTasks();
       await fetchCurrentDay();
@@ -238,22 +238,42 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const addCompletedItem = async (type: 'Book' | 'Game' | 'Course', name: string, timeSpent?: number, completedDate?: string) => {
+    try {
+      const result = await weeklyService.addCompletedItem(type, name, timeSpent, completedDate);
+
+      // Mostrar mensaje de éxito
+      const itemType = type === 'Book' ? 'Libro' : type === 'Game' ? 'Juego' : 'Curso';
+      console.log(`✅ ${itemType} "${name}" agregado al historial exitosamente`);
+
+      return result;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Error agregando item al historial' });
+      throw error;
+    }
+  };
+
   const updateTaskNotes = async (taskId: string, notes: string) => {
     try {
       const updatedTask = await weeklyService.updateTaskNotes(taskId, notes);
-      
+
       // Actualizar la tarea en el estado local
-      dispatch({ 
-        type: 'UPDATE_TASK_NOTES', 
-        payload: { taskId, notes } 
+      dispatch({
+        type: 'UPDATE_TASK_NOTES',
+        payload: { taskId, notes }
       });
-      
+
       return updatedTask;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Error actualizando notas de la tarea' });
       throw error;
     }
   };
+
+  // Timer simplificado - solo persiste el estado, la lógica está en el componente
+  // No necesitamos timer global complejo, solo persistencia del estado
+
+
 
   const value: WeeklyContextType = {
     weeklyTasks: state.weeklyTasks,
@@ -274,6 +294,7 @@ export const WeeklyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     tickTimer,
     addCourse,
     completeCourse,
+    addCompletedItem,
     updateTaskNotes,
   }
 

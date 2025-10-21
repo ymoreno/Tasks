@@ -16,6 +16,7 @@ import { fileRoutes } from './routes/fileRoutes';
 import { financeRoutes } from './routes/financeRoutes';
 import debtRoutes from './routes/debtRoutes';
 import historyRoutes from './routes/historyRoutes';
+import { healthRoutes } from './routes/healthRoutes';
 
 // Importar middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -69,7 +70,10 @@ app.use(`${config.api.prefix}/finance`, financeRoutes);
 app.use(`${config.api.prefix}/debts`, debtRoutes);
 app.use(`${config.api.prefix}/history`, historyRoutes);
 
-// Ruta de salud del servidor
+// Rutas de health check
+app.use('/', healthRoutes);
+
+// Ruta de salud del servidor (mantener compatibilidad)
 app.get(`${config.api.prefix}/health`, (req, res) => {
   res.json({ 
     status: 'OK', 

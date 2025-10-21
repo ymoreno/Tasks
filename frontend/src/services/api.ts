@@ -284,6 +284,20 @@ export const weeklyService = {
     await api.post('/weekly/complete-course', { parentSubtaskId, courseSubtaskId });
   },
 
+  // Agregar item completado al historial
+  async addCompletedItem(type: 'Book' | 'Game' | 'Course', name: string, timeSpent?: number, completedDate?: string): Promise<{ item: any }> {
+    const response = await api.post<ApiResponse<{ item: any }>>('/weekly/add-completed-item', {
+      type,
+      name,
+      timeSpent,
+      completedDate
+    });
+    if (!response.data.data) {
+      throw new Error('Error adding completed item');
+    }
+    return response.data.data;
+  },
+
   // Actualizar el estado del timer de la tarea Mac
   async updateTimerState(elapsedSeconds: number, state: 'running' | 'paused' | 'stopped'): Promise<DayState> {
     const response = await api.post<ApiResponse<{ dayState: DayState }>>('/weekly/timer', {

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Backend Development
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tasks-backend-dev
+    ports:
+      - "3001:3001"
+    volumes:
+      # Hot reload para desarrollo
+      - ./backend/src:/app/src
+      - ./backend/data:/app/data
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+    command: npm run dev
+    restart: unless-stopped
+    networks:
+      - tasks-network
+
+  # Frontend Development
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: tasks-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot reload para desarrollo
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - backend-dev
+    restart: unless-stopped
+    networks:
+      - tasks-network
+
+networks:
+  tasks-network:
+    driver: bridge

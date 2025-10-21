@@ -66,6 +66,7 @@ export interface DayState {
   subtaskQueues: { [taskId: string]: Subtask[] };
   timerElapsedSeconds?: number;
   timerState?: TimerState;
+  lastDailyRotation?: string; // Fecha de la última rotación diaria
 }
 
 // Espacios disponibles para tareas y compras

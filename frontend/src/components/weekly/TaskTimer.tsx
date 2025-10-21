@@ -19,7 +19,6 @@ interface TaskTimerProps {
   taskName: string;
   elapsedSeconds: number;
   timerState: TimerState;
-  onTick: (newSeconds: number) => void;
   onPause: () => void;
   onResume: () => void;
   onComplete: () => void;
@@ -29,7 +28,6 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
   taskName,
   elapsedSeconds,
   timerState,
-  onTick,
   onPause,
   onResume,
   onComplete
@@ -38,7 +36,6 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
-  const [lastTickTime, setLastTickTime] = useState<number>(Date.now());
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const TARGET_MINUTES = 45;
@@ -107,67 +104,14 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   };
 
-  // Timer principal controlado por el estado del contexto
+  // Verificar alarma cuando el timer alcanza 45 minutos
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (timerState === 'running') {
-      interval = setInterval(() => {
-        const now = Date.now();
-        const timeSinceLastTick = now - lastTickTime;
-
-        // Detectar si el sistema estuvo pausado (más de 2 segundos desde el último tick)
-        if (timeSinceLastTick > 2000) {
-          // Calcular el tiempo real que debería haber transcurrido
-          if (startTime) {
-            const startDate = new Date(`1970-01-01T${startTime}`);
-            const currentTimeStr = new Date().toLocaleTimeString('es-ES', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-              hour12: false
-            });
-            const currentDate = new Date(`1970-01-01T${currentTimeStr}`);
-            const realElapsedMs = currentDate.getTime() - startDate.getTime();
-            const realElapsedSeconds = Math.floor(realElapsedMs / 1000);
-
-            // Corregir el timer al tiempo real
-            if (realElapsedSeconds > elapsedSeconds) {
-              onTick(realElapsedSeconds);
-              setLastTickTime(now);
-
-              // Verificar alarma después de la corrección
-              if (realElapsedSeconds >= TARGET_SECONDS && elapsedSeconds < TARGET_SECONDS) {
-                setShowAlarm(true);
-                playAlarm();
-                onPause();
-              }
-
-              return; // Salir para evitar el tick normal
-            }
-          }
-        }
-
-        // Tick normal
-        const newSeconds = elapsedSeconds + 1;
-        onTick(newSeconds);
-        setLastTickTime(now);
-
-        // Alarma a los 45 minutos (activar cuando se alcanza o supera por primera vez)
-        if (newSeconds >= TARGET_SECONDS && elapsedSeconds < TARGET_SECONDS) {
-          setShowAlarm(true);
-          playAlarm();
-          // Pausar automáticamente el timer
-          onPause();
-        }
-      }, 1000);
+    if (elapsedSeconds >= TARGET_SECONDS && timerState === 'paused' && !showAlarm) {
+      // El timer fue pausado automáticamente por alcanzar 45 minutos
+      setShowAlarm(true);
+      playAlarm();
     }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [timerState, elapsedSeconds, onTick, onComplete, lastTickTime, startTime]);
+  }, [elapsedSeconds, timerState, showAlarm]);
 
   // Capturar tiempo de inicio y fin
   useEffect(() => {
@@ -183,7 +127,6 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
       // Capturar tiempo de inicio cuando el timer comience a correr
       setStartTime(timeString);
       setEndTime(null); // Limpiar tiempo de fin anterior
-      setLastTickTime(Date.now()); // Inicializar el tiempo del último tick
     } else if ((timerState === 'stopped' || timerState === 'paused') && elapsedSeconds >= TARGET_SECONDS && !endTime) {
       // Capturar tiempo de fin cuando se complete, pause o detenga después de 45 minutos
       setEndTime(timeString);
@@ -194,14 +137,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({
     }
   }, [timerState, elapsedSeconds, startTime, endTime]);
 
-  // Verificación independiente de alarma (backup)
-  useEffect(() => {
-    if (timerState === 'running' && elapsedSeconds >= TARGET_SECONDS && !showAlarm) {
-      setShowAlarm(true);
-      playAlarm();
-      onPause();
-    }
-  }, [elapsedSeconds, timerState, showAlarm]);
+
 
   const playAlarm = async () => {
 

@@ -3,7 +3,7 @@ import { Box, Typography, Paper, Grid, Button, LinearProgress, Alert } from '@mu
 import { Start, SkipNext } from '@mui/icons-material'
 import { useWeeklyContext } from '@/contexts/WeeklyContext'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
-import TaskTimer from '@/components/weekly/TaskTimer'
+import SimpleTimer from '@/components/weekly/SimpleTimer'
 import TaskNotes from '@/components/weekly/TaskNotes'
 import ReadingTask from '@/components/weekly/ReadingTask'
 import GameTask from '@/components/weekly/GameTask'
@@ -29,6 +29,8 @@ const WeeklyPage: React.FC = () => {
     completeCourse,
     updateTaskNotes
   } = useWeeklyContext()
+
+
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -151,7 +153,7 @@ const WeeklyPage: React.FC = () => {
 
               {/* Timer - Visible para cualquier tarea iniciada */}
               {currentTask && currentTask.isStarted && dayState && (
-                <TaskTimer
+                <SimpleTimer
                   taskName={currentTask.name}
                   elapsedSeconds={dayState.timerElapsedSeconds || 0}
                   timerState={dayState.timerState || 'stopped'}

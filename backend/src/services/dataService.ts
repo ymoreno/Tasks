@@ -156,7 +156,8 @@ export class WeeklyTaskService {
         currentTaskIndex: 0,
         completedTasks: [],
         dayCompleted: false,
-        subtaskQueues: {}
+        subtaskQueues: {},
+        lastDailyRotation: undefined // No se ha hecho rotación diaria aún
       }
     });
   }
@@ -171,19 +172,42 @@ export class WeeklyTaskService {
     if (currentDate !== today) {
       console.log(`🔄 Nuevo día detectado: ${currentDate} → ${today}. Reseteando estado...`);
       
-      // Rotar tareas con rotación diaria (como Mac)
-      for (const task of data.sequence) {
-        if (task.subtaskRotation === 'dailyOrCompletion' && task.subtasks && task.subtasks.length > 0) {
-          const currentSubtaskIndex = task.subtasks.findIndex(sub => sub.id === task.currentSubtaskId);
-          if (currentSubtaskIndex !== -1) {
-            // Rotar a la siguiente subtarea (circular)
-            const nextSubtaskIndex = (currentSubtaskIndex + 1) % task.subtasks.length;
-            const oldSubtask = task.subtasks[currentSubtaskIndex].name;
-            const newSubtask = task.subtasks[nextSubtaskIndex].name;
-            task.currentSubtaskId = task.subtasks[nextSubtaskIndex].id;
-            console.log(`🔄 ${task.name}: ${oldSubtask} → ${newSubtask} (rotación diaria)`);
+      // Verificar si ya se hizo la rotación diaria para hoy
+      const lastDailyRotation = data.dailyState.lastDailyRotation;
+      const needsDailyRotation = lastDailyRotation !== today;
+      
+      if (needsDailyRotation) {
+        console.log(`🔄 Ejecutando rotación diaria para ${today}...`);
+        
+        // Verificar si es lunes (día 1) para rotación semanal
+        const currentDay = new Date(today).getDay(); // 0 = domingo, 1 = lunes
+        const isMonday = currentDay === 1;
+        
+        // Rotar tareas con rotación diaria (como Mac)
+        for (const task of data.sequence) {
+          if (task.subtaskRotation === 'dailyOrCompletion' && task.subtasks && task.subtasks.length > 0) {
+            const currentSubtaskIndex = task.subtasks.findIndex(sub => sub.id === task.currentSubtaskId);
+            if (currentSubtaskIndex !== -1) {
+              // Rotar a la siguiente subtarea (circular)
+              const nextSubtaskIndex = (currentSubtaskIndex + 1) % task.subtasks.length;
+              const oldSubtask = task.subtasks[currentSubtaskIndex].name;
+              const newSubtask = task.subtasks[nextSubtaskIndex].name;
+              task.currentSubtaskId = task.subtasks[nextSubtaskIndex].id;
+              console.log(`✅ ${task.name}: ${oldSubtask} → ${newSubtask} (rotación diaria)`);
+            }
           }
         }
+        
+        // Rotar tareas con rotación semanal (solo los lunes)
+        if (isMonday) {
+          console.log(`📅 Es lunes - Ejecutando rotación semanal...`);
+          await this.rotateWeeklySubtasks(data);
+        }
+        
+        // Marcar que ya se hizo la rotación diaria para hoy
+        data.dailyState.lastDailyRotation = today;
+      } else {
+        console.log(`ℹ️ Rotación diaria ya ejecutada para ${today}, omitiendo...`);
       }
       
       // Resetear todas las tareas
@@ -191,7 +215,7 @@ export class WeeklyTaskService {
         task.isStarted = false;
       }
       
-      // Resetear el estado del día
+      // Resetear el estado del día (preservando lastDailyRotation si existe)
       data.dailyState = {
         date: today,
         currentTaskIndex: 0,
@@ -199,7 +223,8 @@ export class WeeklyTaskService {
         dayCompleted: false,
         subtaskQueues: {},
         timerElapsedSeconds: 0,
-        timerState: 'stopped'
+        timerState: 'stopped',
+        lastDailyRotation: data.dailyState.lastDailyRotation // Preservar la fecha de rotación
       };
       
       // Guardar los cambios
@@ -431,6 +456,50 @@ export class WeeklyTaskService {
     }
 
     return rotationSummary;
+  }
+
+  static async rotateWeeklySubtasks(data: any): Promise<void> {
+    // Función recursiva para rotar subtareas con rotación semanal
+    const rotateSubtasksRecursively = (subtasks: any[], parentName: string) => {
+      for (const subtask of subtasks) {
+        if (subtask.subtaskRotation === 'weekly' && subtask.subtasks && subtask.subtasks.length > 0) {
+          const currentSubtaskIndex = subtask.subtasks.findIndex((sub: any) => sub.id === subtask.currentSubtaskId);
+          if (currentSubtaskIndex !== -1) {
+            // Rotar a la siguiente subtarea (circular)
+            const nextSubtaskIndex = (currentSubtaskIndex + 1) % subtask.subtasks.length;
+            const oldSubtask = subtask.subtasks[currentSubtaskIndex].name;
+            const newSubtask = subtask.subtasks[nextSubtaskIndex].name;
+            subtask.currentSubtaskId = subtask.subtasks[nextSubtaskIndex].id;
+            console.log(`✅ ${parentName} → ${subtask.name}: ${oldSubtask} → ${newSubtask} (rotación semanal)`);
+          }
+        }
+        
+        // Recursión para subtareas anidadas
+        if (subtask.subtasks && subtask.subtasks.length > 0) {
+          rotateSubtasksRecursively(subtask.subtasks, `${parentName} → ${subtask.name}`);
+        }
+      }
+    };
+
+    // Rotar tareas principales con rotación semanal
+    for (const task of data.sequence) {
+      if (task.subtaskRotation === 'weekly' && task.subtasks && task.subtasks.length > 0) {
+        const currentSubtaskIndex = task.subtasks.findIndex((sub: any) => sub.id === task.currentSubtaskId);
+        if (currentSubtaskIndex !== -1) {
+          // Rotar a la siguiente subtarea (circular)
+          const nextSubtaskIndex = (currentSubtaskIndex + 1) % task.subtasks.length;
+          const oldSubtask = task.subtasks[currentSubtaskIndex].name;
+          const newSubtask = task.subtasks[nextSubtaskIndex].name;
+          task.currentSubtaskId = task.subtasks[nextSubtaskIndex].id;
+          console.log(`✅ ${task.name}: ${oldSubtask} → ${newSubtask} (rotación semanal)`);
+        }
+      }
+      
+      // Rotar subtareas anidadas con rotación semanal
+      if (task.subtasks && task.subtasks.length > 0) {
+        rotateSubtasksRecursively(task.subtasks, task.name);
+      }
+    }
   }
 
   static async getTaskStatistics(period?: 'week' | 'month' | 'quarter' | 'semester' | 'year' | 'total'): Promise<any> {

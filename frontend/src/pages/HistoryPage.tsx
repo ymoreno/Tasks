@@ -1,27 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { getHistory } from '../services/historyService';
 import { CompletedItem } from '../types';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box, Select, MenuItem, FormControl, InputLabel, Fab } from '@mui/material';
+import { Add } from '@mui/icons-material';
+import AddCompletedItem from '@/components/history/AddCompletedItem';
 
 const HistoryPage: React.FC = () => {
   const [history, setHistory] = useState<CompletedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('All');
+  const [showAddCompletedDialog, setShowAddCompletedDialog] = useState(false);
+
+  const fetchHistory = async () => {
+    try {
+      const data = await getHistory();
+      setHistory(data);
+    } catch (err) {
+      setError('Error fetching history');
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const data = await getHistory();
-        setHistory(data);
-      } catch (err) {
-        setError('Error fetching history');
-      }
-      setLoading(false);
-    };
-
     fetchHistory();
   }, []);
+
+  // Función para refrescar el historial después de agregar un item
+  const handleItemAdded = () => {
+    fetchHistory();
+  };
 
   const filteredHistory = history.filter(item => {
     if (filter === 'All') return true;
@@ -38,9 +46,11 @@ const HistoryPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Historial de Items Completados
-      </Typography>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
+          Historial de Items Completados
+        </Typography>
+      </Box>
 
       <FormControl sx={{ mb: 2, minWidth: 120 }}>
         <InputLabel>Filtrar por tipo</InputLabel>
@@ -78,6 +88,30 @@ const HistoryPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Botón flotante para agregar items completados */}
+      <Fab
+        color="primary"
+        aria-label="Agregar item completado"
+        onClick={() => setShowAddCompletedDialog(true)}
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 1000
+        }}
+      >
+        <Add />
+      </Fab>
+
+      {/* Diálogo para agregar items completados */}
+      <AddCompletedItem
+        open={showAddCompletedDialog}
+        onClose={() => {
+          setShowAddCompletedDialog(false);
+          handleItemAdded(); // Refrescar la lista después de agregar
+        }}
+      />
     </Box>
   );
 };

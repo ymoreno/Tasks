@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Backend Service (desde Docker Hub)
+  backend:
+    image: your-dockerhub-username/administrador-tareas-backend:latest
+    container_name: tasks-backend-prod
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persistir datos
+      - tasks-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+    networks:
+      - tasks-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service (desde Docker Hub)
+  frontend:
+    image: your-dockerhub-username/administrador-tareas-frontend:latest
+    container_name: tasks-frontend-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - tasks-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  tasks-network:
+    driver: bridge
+
+volumes:
+  tasks-data:
+    driver: local

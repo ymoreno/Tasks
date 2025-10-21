@@ -641,6 +641,45 @@ router.post('/complete-course', async (req, res, next) => {
   }
 });
 
+// POST /api/weekly/add-completed-item - Agregar item completado al historial
+router.post('/add-completed-item', async (req, res, next) => {
+  try {
+    const { type, name, timeSpent, completedDate } = req.body;
+    
+    if (!type || !name) {
+      throw createError('type y name son requeridos', 400);
+    }
+    
+    // Validar tipo
+    const validTypes = ['Book', 'Game', 'Course'];
+    if (!validTypes.includes(type)) {
+      throw createError('type debe ser Book, Game o Course', 400);
+    }
+    
+    // Crear item para el historial
+    const completedItem = {
+      id: type === 'Book' ? 'weekly_3' : type === 'Game' ? 'weekly_4' : 'weekly_13',
+      type,
+      name,
+      timeSpent: timeSpent || 2700, // 45 minutos por defecto
+      parentId: type === 'Book' ? 'weekly_3' : type === 'Game' ? 'weekly_4' : 'weekly_13',
+      completedDate: completedDate || new Date().toISOString()
+    };
+    
+    await HistoryService.addToHistory(completedItem);
+    
+    const response: ApiResponse<{ item: typeof completedItem }> = {
+      success: true,
+      data: { item: completedItem },
+      message: `${type === 'Book' ? 'Libro' : type === 'Game' ? 'Juego' : 'Curso'} "${name}" agregado al historial exitosamente`
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/weekly/rotation-summary - Obtener resumen de rotaciones actuales
 router.get('/rotation-summary', async (req, res, next) => {
   try {

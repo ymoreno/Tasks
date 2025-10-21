@@ -373,6 +373,7 @@ export interface WeeklyContextType {
   tickTimer: (newSeconds: number) => void;
   addCourse: (parentSubtaskId: string, courseName: string) => Promise<void>;
   completeCourse: (parentSubtaskId: string, courseSubtaskId: string) => Promise<void>;
+  addCompletedItem: (type: 'Book' | 'Game' | 'Course', name: string, timeSpent?: number, completedDate?: string) => Promise<{ item: any }>;
   updateTaskNotes: (taskId: string, notes: string) => Promise<WeeklyTask>;
 }
 
