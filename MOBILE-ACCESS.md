@@ -118,4 +118,5 @@ Tu administrador de tareas ahora es completamente accesible desde tu celular con
 - ✅ **Pagos y compras** desde cualquier lugar
 - ✅ **Estadísticas** siempre actualizadas
 
+
 ¡Disfruta gestionando tus tareas desde cualquier dispositivo! 📱✨

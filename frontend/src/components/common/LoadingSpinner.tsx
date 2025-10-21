@@ -7,7 +7,7 @@ interface LoadingSpinnerProps {
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
-  message = 'Cargando...', 
+  message = 'Cargando....', 
   size = 40 
 }) => {
   return (

@@ -34,7 +34,6 @@ const OfflineStatus: React.FC = () => {
       updateStats()
     })
 
-    // Actualizar estadísticas periódicamente
     const interval = setInterval(updateStats, 5000)
 
     return () => {

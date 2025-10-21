@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Script de configuración para el Administrador de Tareas
 echo "🚀 Configurando Administrador de Tareas..."
 
 # Verificar que Node.js esté instalado

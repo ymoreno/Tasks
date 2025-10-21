@@ -20,7 +20,7 @@ const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   const pendingActions = usePendingActions()
 
   if (isOnline && pendingActions === 0) {
-    return null // No mostrar nada si está online y no hay acciones pendientes
+    return null 
   }
 
   const getChipProps = () => {

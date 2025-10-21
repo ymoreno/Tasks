@@ -114,7 +114,6 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
     )
   }
 
-  // Selector simple (dropdown tradicional)
   return (
     <FormControl fullWidth required={required} disabled={disabled}>
       <InputLabel>{label}</InputLabel>

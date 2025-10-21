@@ -40,7 +40,6 @@ export const SPACES: Space[] = [
 ]
 
 export const spaceService = {
-  // Obtener todos los espacios
   getAllSpaces(): Space[] {
     return SPACES
   },

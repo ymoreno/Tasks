@@ -46,7 +46,7 @@ const NetworkInfo: React.FC = () => {
   }, [])
 
   if (networkInfo.isLocal && !isMobile) {
-    return null // No mostrar en localhost desde desktop
+    return null 
   }
 
   return (

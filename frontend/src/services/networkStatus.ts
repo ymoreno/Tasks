@@ -17,7 +17,6 @@ class NetworkStatusService {
     this.checkInitialConnection()
   }
 
-  // Configurar listeners de eventos de red
   private setupEventListeners(): void {
     window.addEventListener('online', () => {
       console.log('🌐 Conexión restaurada')

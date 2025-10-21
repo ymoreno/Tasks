@@ -88,7 +88,6 @@ class Logger {
 // Exportar instancia singleton
 export const logger = new Logger();
 
-// Middleware para logging de requests
 export const requestLogger = (req: any, res: any, next: any) => {
   const start = Date.now();
   

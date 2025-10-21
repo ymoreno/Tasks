@@ -47,7 +47,6 @@ export const readingService = {
     return diffWeeks + 2 // +2 porque empezamos desde la semana 2
   },
 
-  // Obtener información del libro actual
   getCurrentBookInfo(): { format: string; title: string; weekNumber: number } {
     const book = this.getCurrentBook()
     const weekNumber = this.getCurrentWeekNumber()

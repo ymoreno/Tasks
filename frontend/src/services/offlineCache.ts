@@ -20,7 +20,7 @@ interface PendingAction {
 class OfflineCache {
   private readonly CACHE_PREFIX = 'task_cache_'
   private readonly PENDING_PREFIX = 'task_pending_'
-  private readonly MAX_CACHE_SIZE = 50 // Máximo 50 items en cache
+  private readonly MAX_CACHE_SIZE = 50 
   private readonly CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 horas
 
   // Guardar datos en cache

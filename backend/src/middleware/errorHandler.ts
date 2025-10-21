@@ -41,7 +41,6 @@ export const errorHandler = (
     error = { name: 'FileNotFound', message, statusCode: 404 };
   }
 
-  // Error de JSON malformado
   if (err.name === 'SyntaxError' && 'body' in err) {
     const message = 'Formato JSON inválido';
     error = { name: 'JSONError', message, statusCode: 400 };

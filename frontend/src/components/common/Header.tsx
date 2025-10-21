@@ -16,7 +16,7 @@ const Header: React.FC = () => {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2" sx={{ opacity: 0.8, display: { xs: 'none', sm: 'block' } }}>
-            Gestión inteligente de tareas con seguimiento de tiempo
+            Gestión de tareas con seguimiento de tiempo
           </Typography>
           <OfflineIndicator size="small" />
         </Box>

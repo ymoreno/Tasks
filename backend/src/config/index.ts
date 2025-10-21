@@ -10,7 +10,7 @@ export const config = {
     isProduction: process.env.NODE_ENV === 'production',
   },
 
-  // Configuración de CORS
+  // CORS config
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || [
       'http://localhost:3000',

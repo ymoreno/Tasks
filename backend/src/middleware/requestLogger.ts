@@ -17,7 +17,6 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   res.send = function(data) {
     const duration = Date.now() - start;
     
-    // Log de respuesta
     logger.request(req.method, req.originalUrl, res.statusCode, duration);
     
     return originalSend.call(this, data);

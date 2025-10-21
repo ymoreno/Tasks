@@ -178,7 +178,6 @@ await networkStatus.forcSync()
 
 ### Inspeccionar localStorage
 ```javascript
-// Ver cache
 Object.keys(localStorage).filter(k => k.startsWith('task_cache_'))
 
 // Ver acciones pendientes

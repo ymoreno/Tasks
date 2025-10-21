@@ -29,7 +29,6 @@ export const useOfflineState = (): [OfflineState, OfflineActions] => {
     lastSync: 0
   })
 
-  // Actualizar estado interno
   const updateState = useCallback(() => {
     const syncStats = networkStatus.getSyncStats()
     const cacheStats = offlineCache.getStats()
