@@ -8,9 +8,10 @@
     "dev:mobile": "node get-ip.js && concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "cd backend && npm run dev",
     "client:dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
+    "build": "cd frontend && npm install && npm run build",
     "start": "cd backend && npm start",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
     "ip": "node get-ip.js"
   },
   "keywords": [
