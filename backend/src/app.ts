@@ -46,8 +46,8 @@ if (config.server.isDevelopment) {
 
 // Configuración de CORS
 app.use(cors({
-  origin: config.server.isProduction 
-    ? ['https://tu-dominio.com'] 
+  origin: config.server.isProduction
+    ? ['https://tu-dominio.com']
     : config.cors.origin,
   credentials: config.cors.credentials
 }));
@@ -75,8 +75,8 @@ app.use('/', healthRoutes);
 
 // Ruta de salud del servidor (mantener compatibilidad)
 app.get(`${config.api.prefix}/health`, (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     environment: config.server.env,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
@@ -93,14 +93,14 @@ app.get(`${config.api.prefix}/health`, (req, res) => {
 if (config.server.isProduction) {
   const frontendPath = path.join(__dirname, '../../frontend/dist');
   app.use(express.static(frontendPath));
-  
+
   // Manejar rutas del frontend (SPA)
   app.get('*', (req, res) => {
     // No interceptar rutas de la API
     if (req.path.startsWith(config.api.prefix)) {
       return res.status(404).json({ success: false, error: `Ruta de API no encontrada - ${req.path}` });
     }
-    res.sendFile(path.join(frontendPath, 'index.html'));
+    return res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 
