@@ -38,6 +38,26 @@ async function build() {
     await runCommand('npm', ['install'], path.join(__dirname, 'backend'));
     await runCommand('npm', ['run', 'build'], path.join(__dirname, 'backend'));
     
+    // Copiar archivos de datos al directorio dist del backend
+    console.log('📁 Copiando archivos de datos...');
+    const fs = require('fs');
+    const srcDataDir = path.join(__dirname, 'backend', 'data');
+    const destDataDir = path.join(__dirname, 'backend', 'dist', 'data');
+    
+    // Crear directorio de destino
+    if (!fs.existsSync(destDataDir)) {
+      fs.mkdirSync(destDataDir, { recursive: true });
+    }
+    
+    // Copiar archivos JSON
+    const dataFiles = fs.readdirSync(srcDataDir).filter(file => file.endsWith('.json'));
+    for (const file of dataFiles) {
+      const srcFile = path.join(srcDataDir, file);
+      const destFile = path.join(destDataDir, file);
+      fs.copyFileSync(srcFile, destFile);
+      console.log(`📄 Copiado: ${file}`);
+    }
+    
     // Build frontend con límite de memoria
     console.log('⚛️ Construyendo frontend...');
     await runCommand('npm', ['install'], path.join(__dirname, 'frontend'));

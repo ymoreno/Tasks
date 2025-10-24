@@ -36,7 +36,9 @@ export const config = {
 
   // Configuración de paths
   paths: {
-    data: path.join(__dirname, '../../data'),
+    data: process.env.NODE_ENV === 'production' 
+      ? path.join(__dirname, '../data')  // En producción: dist/data
+      : path.join(__dirname, '../../data'), // En desarrollo: backend/data
     uploads: path.join(__dirname, '../../uploads'),
     backups: path.join(__dirname, '../../data/backups'),
   },
