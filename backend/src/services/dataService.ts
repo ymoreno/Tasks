@@ -154,17 +154,149 @@ export class WeeklyTaskService {
     return getBogotaDayOfWeek();
   }
   static async getWeeklyData(): Promise<{ sequence: WeeklyTask[]; dailyState: DayState }> {
-    return await readJsonFile(WEEKLY_FILE, {
-      sequence: [],
+    const defaultData = {
+      sequence: [
+        {
+          id: "weekly_1",
+          name: "Ejercicio",
+          plannedDays: 7,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 1,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_2", 
+          name: "Casa",
+          plannedDays: 7,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 2,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_9",
+          name: "Plantas", 
+          plannedDays: 1,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 3,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_7",
+          name: "Lista",
+          plannedDays: 2,
+          completedDays: 0, 
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 4,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_13",
+          name: "Mac",
+          plannedDays: 3,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false], 
+          order: 5,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_5",
+          name: "Aero",
+          plannedDays: 3,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 6,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_3",
+          name: "Leer", 
+          plannedDays: 7,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 7,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_4",
+          name: "Juego",
+          plannedDays: 7,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 8,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_6", 
+          name: "PC",
+          plannedDays: 3,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 9,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_12",
+          name: "Escribir",
+          plannedDays: 1,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 10,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_10",
+          name: "Carro", 
+          plannedDays: 1,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 11,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        },
+        {
+          id: "weekly_11",
+          name: "Dibujar",
+          plannedDays: 1,
+          completedDays: 0,
+          weeklySchedule: [true, true, true, false, false, false, false],
+          order: 12,
+          timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          isStarted: true
+        }
+      ] as WeeklyTask[],
       dailyState: {
         date: getBogotaDate(),
         currentTaskIndex: 0,
         completedTasks: [],
         dayCompleted: false,
         subtaskQueues: {},
-        lastDailyRotation: undefined // No se ha hecho rotación diaria aún
+        lastDailyRotation: undefined
       }
-    });
+    };
+    
+    const data = await readJsonFile(WEEKLY_FILE, defaultData);
+    
+    // Si el archivo existe pero sequence está vacío, usar datos por defecto
+    if (!data.sequence || data.sequence.length === 0) {
+      console.log('📝 Archivo existe pero sequence está vacío, usando datos por defecto');
+      data.sequence = defaultData.sequence;
+      await writeJsonFile(WEEKLY_FILE, data);
+    }
+    
+    return data;
   }
 
   static async getCurrentDayState(): Promise<DayState> {
