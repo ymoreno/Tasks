@@ -25,8 +25,11 @@ router.get('/tasks', async (req, res, next) => {
 // GET /api/weekly/current-day - Obtener estado del día actual
 router.get('/current-day', async (req, res, next) => {
   try {
+    console.log('🔄 GET /api/weekly/current-day - Iniciando...');
     const dayState = await WeeklyTaskService.getCurrentDayState();
+    console.log('📅 DayState obtenido:', dayState);
     const weeklyData = await WeeklyTaskService.getWeeklyData();
+    console.log('📋 WeeklyData obtenido, tareas:', weeklyData.sequence.length);
     
     // Verificar si es un nuevo día en la zona horaria de Bogotá (GMT-5)
     const today = WeeklyTaskService.getBogotaDate();
@@ -75,6 +78,11 @@ router.get('/current-day', async (req, res, next) => {
       message: 'Estado del día actual obtenido'
     };
     
+    console.log('✅ Enviando respuesta current-day:', { 
+      currentTaskName: currentTask?.name, 
+      totalTasks: weeklyData.sequence.length,
+      dayCompleted: dayState.dayCompleted 
+    });
     return res.json(response);
   } catch (error) {
     return next(error);

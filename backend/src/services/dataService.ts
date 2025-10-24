@@ -35,10 +35,15 @@ const getBogotaDayOfWeek = (): number => {
 
 const readJsonFile = async <T>(filePath: string, defaultValue: T): Promise<T> => {
   try {
+    console.log(`📖 Leyendo archivo: ${filePath}`);
     const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    console.log(`✅ Archivo leído exitosamente: ${filePath}, tamaño: ${data.length} caracteres`);
+    return parsed;
   } catch (error) {
+    console.error(`❌ Error leyendo archivo ${filePath}:`, error);
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      console.log(`📝 Creando archivo por defecto: ${filePath}`);
       await writeJsonFile(filePath, defaultValue);
       return defaultValue;
     }
