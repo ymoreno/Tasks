@@ -12,14 +12,18 @@ export const config = {
 
   // CORS config
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      // Permitir cualquier IP local para desarrollo
-      /^http:\/\/192\.168\.\d+\.\d+:3000$/,
-      /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
-      /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:3000$/
-    ],
+    origin: process.env.CORS_ORIGIN?.split(',') || (
+      process.env.NODE_ENV === 'production' 
+        ? true // En producción, permitir el mismo origen (Railway)
+        : [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            // Permitir cualquier IP local para desarrollo
+            /^http:\/\/192\.168\.\d+\.\d+:3000$/,
+            /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
+            /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:3000$/
+          ]
+    ),
     credentials: true,
   },
 
