@@ -22,6 +22,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false, // Desactivar sourcemaps para ahorrar memoria
+    minify: 'esbuild', // Usar esbuild que es más eficiente en memoria
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          mui: ['@mui/material', '@mui/icons-material'],
+        }
+      }
+    }
   },
 })
