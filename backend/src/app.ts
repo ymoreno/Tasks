@@ -89,6 +89,21 @@ app.get(`${config.api.prefix}/health`, (req, res) => {
   });
 });
 
+// Servir archivos estáticos del frontend en producción
+if (config.server.isProduction) {
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendPath));
+  
+  // Manejar rutas del frontend (SPA)
+  app.get('*', (req, res) => {
+    // No interceptar rutas de la API
+    if (req.path.startsWith(config.api.prefix)) {
+      return res.status(404).json({ success: false, error: `Ruta de API no encontrada - ${req.path}` });
+    }
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
 // Middleware de manejo de errores
 app.use(notFound);
 app.use(requestErrorLogger);
