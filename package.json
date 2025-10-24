@@ -9,7 +9,7 @@
     "server:dev": "cd backend && npm run dev",
     "client:dev": "cd frontend && npm run dev",
     "build": "cd backend && npm install && npm run build && cd ../frontend && npm install && npm run build",
-    "start": "node start.js",
+    "start": "npm run build && node start.js",
     "start:prod": "cd backend && npm run start:prod",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "postinstall": "cd backend && npm install && cd ../frontend && npm install",
