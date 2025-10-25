@@ -705,6 +705,41 @@ router.get('/rotation-summary', async (req, res, next) => {
   }
 });
 
+// GET /api/weekly/debug-data - Endpoint temporal para verificar datos
+router.get('/debug-data', async (req, res, next) => {
+  try {
+    const weeklyData = await WeeklyTaskService.getWeeklyData();
+    
+    // Extraer información relevante de las subtareas
+    const debugInfo = {
+      totalTasks: weeklyData.sequence.length,
+      tasksWithSubtasks: weeklyData.sequence
+        .filter(task => task.subtasks && task.subtasks.length > 0)
+        .map(task => ({
+          name: task.name,
+          currentSubtask: task.currentSubtaskId,
+          subtasks: task.subtasks.map(sub => ({
+            id: sub.id,
+            name: sub.name,
+            title: (sub as any).title || 'Sin título'
+          }))
+        })),
+      leerDetails: weeklyData.sequence.find(t => t.name === 'Leer'),
+      juegoDetails: weeklyData.sequence.find(t => t.name === 'Juego')
+    };
+    
+    const response: ApiResponse<typeof debugInfo> = {
+      success: true,
+      data: debugInfo,
+      message: 'Información de debug obtenida'
+    };
+    
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/weekly/task-statistics - Obtener estadísticas detalladas por tarea
 router.get('/task-statistics', async (req, res, next) => {
   try {

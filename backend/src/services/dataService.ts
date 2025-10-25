@@ -327,7 +327,7 @@ export class WeeklyTaskService {
             {
               id: "sub_leer_kindle",
               name: "Kindle",
-              title: "Libro Digital"
+              title: "Corazones Perdidos"
             },
             {
               id: "sub_leer_pcnovela",
@@ -367,7 +367,7 @@ export class WeeklyTaskService {
             {
               id: "sub_juego_ps3",
               name: "PS3", 
-              title: "PlayStation 3"
+              title: "CTR"
             },
             {
               id: "sub_juego_steam",
