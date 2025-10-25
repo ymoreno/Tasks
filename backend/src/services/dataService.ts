@@ -194,6 +194,42 @@ export class WeeklyTaskService {
           weeklySchedule: [true, true, true, false, false, false, false],
           order: 4,
           timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          subtaskRotation: "onStartOrCompletion",
+          currentSubtaskId: "sub_lista_peliculas",
+          subtasks: [
+            {
+              id: "sub_lista_arreglarme",
+              name: "Arreglarme"
+            },
+            {
+              id: "sub_lista_musica", 
+              name: "Musica"
+            },
+            {
+              id: "sub_lista_peliculas",
+              name: "Peliculas",
+              subtaskRotation: "weekly",
+              currentSubtaskId: "sub_peliculas_downloaded",
+              subtasks: [
+                {
+                  id: "sub_peliculas_dvd",
+                  name: "DVD"
+                },
+                {
+                  id: "sub_peliculas_downloaded", 
+                  name: "Downloaded"
+                },
+                {
+                  id: "sub_peliculas_netflix",
+                  name: "Netflix"
+                },
+                {
+                  id: "sub_peliculas_max",
+                  name: "Max"
+                }
+              ]
+            }
+          ],
           isStarted: true
         },
         {
@@ -204,6 +240,56 @@ export class WeeklyTaskService {
           weeklySchedule: [true, true, true, false, false, false, false], 
           order: 5,
           timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          subtaskRotation: "dailyOrCompletion",
+          currentSubtaskId: "sub_mac_entrevista",
+          notes: "Trabajando en proyectos de desarrollo.",
+          subtasks: [
+            {
+              id: "sub_mac_algoritmos",
+              name: "Algoritmos"
+            },
+            {
+              id: "sub_mac_java",
+              name: "Java"
+            },
+            {
+              id: "sub_mac_empleo",
+              name: "Empleo"
+            },
+            {
+              id: "sub_mac_entrevista",
+              name: "Entrevista"
+            },
+            {
+              id: "sub_mac_software_gaia",
+              name: "Software - Gaia"
+            },
+            {
+              id: "sub_mac_practicas",
+              name: "Practicas",
+              subtaskRotation: "completion",
+              randomizeNext: true,
+              currentSubtaskId: "sub_practicas_react",
+              subtasks: [
+                {
+                  id: "sub_practicas_react",
+                  name: "React"
+                },
+                {
+                  id: "sub_practicas_java",
+                  name: "Java"
+                },
+                {
+                  id: "sub_practicas_python",
+                  name: "Python"
+                },
+                {
+                  id: "sub_practicas_aws_architect",
+                  name: "AWS Architect"
+                }
+              ]
+            }
+          ],
           isStarted: true
         },
         {
@@ -224,6 +310,38 @@ export class WeeklyTaskService {
           weeklySchedule: [true, true, true, false, false, false, false],
           order: 7,
           timeTracking: { isActive: false, totalTime: 0, sessions: [] },
+          subtaskRotation: "weekly",
+          currentSubtaskId: "sub_leer_kindle",
+          notes: "Leyendo libros variados.",
+          subtasks: [
+            {
+              id: "sub_leer_fisico",
+              name: "Fisico",
+              title: "Libro Físico"
+            },
+            {
+              id: "sub_leer_prestado",
+              name: "Prestado", 
+              title: "Libro Prestado"
+            },
+            {
+              id: "sub_leer_kindle",
+              name: "Kindle",
+              title: "Libro Digital"
+            },
+            {
+              id: "sub_leer_pcnovela",
+              name: "PC Novela",
+              title: "Novela en PC"
+            },
+            {
+              id: "sub_leer_comics",
+              name: "Comics",
+              title: "Comics",
+              readers: ["PC", "Fisico", "Tablet"],
+              currentReader: "PC"
+            }
+          ],
           isStarted: true
         },
         {
@@ -234,7 +352,36 @@ export class WeeklyTaskService {
           weeklySchedule: [true, true, true, false, false, false, false],
           order: 8,
           timeTracking: { isActive: false, totalTime: 0, sessions: [] },
-          isStarted: true
+          currentSubtaskId: "sub_juego_ps3",
+          subtasks: [
+            {
+              id: "sub_juego_retro",
+              name: "Retro",
+              title: "Juegos Retro"
+            },
+            {
+              id: "sub_juego_ps2",
+              name: "PS2",
+              title: "PlayStation 2"
+            },
+            {
+              id: "sub_juego_ps3",
+              name: "PS3", 
+              title: "PlayStation 3"
+            },
+            {
+              id: "sub_juego_steam",
+              name: "Steam",
+              title: "Steam Games"
+            },
+            {
+              id: "sub_juego_ps4",
+              name: "PS4",
+              title: "PlayStation 4"
+            }
+          ],
+          isStarted: true,
+          notes: "Jugando varios juegos en diferentes plataformas."
         },
         {
           id: "weekly_6", 
